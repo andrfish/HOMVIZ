@@ -13,22 +13,20 @@
 
 namespace PhpSpec\Process\ReRunner;
 
-use PhpSpec\Process\Context\ExecutionContextInterface;
+use PhpSpec\Process\Context\ExecutionContext;
 use Symfony\Component\Process\PhpExecutableFinder;
 
-class WindowsPassthruReRunner extends PhpExecutableReRunner
+final class WindowsPassthruReRunner extends PhpExecutableReRunner
 {
     /**
-     * @var ExecutionContextInterface
+     * @var ExecutionContext
      */
     private $executionContext;
 
     /**
-     * @param PhpExecutableFinder $phpExecutableFinder
-     * @param ExecutionContextInterface $executionContext
      * @return static
      */
-    public static function withExecutionContext(PhpExecutableFinder $phpExecutableFinder, ExecutionContextInterface $executionContext)
+    public static function withExecutionContext(PhpExecutableFinder $phpExecutableFinder, ExecutionContext $executionContext)
     {
         $reRunner = new static($phpExecutableFinder);
         $reRunner->executionContext = $executionContext;
@@ -36,10 +34,7 @@ class WindowsPassthruReRunner extends PhpExecutableReRunner
         return $reRunner;
     }
 
-    /**
-     * @return boolean
-     */
-    public function isSupported()
+    public function isSupported(): bool
     {
         return (php_sapi_name() == 'cli')
             && $this->getExecutablePath()
@@ -47,7 +42,7 @@ class WindowsPassthruReRunner extends PhpExecutableReRunner
             && (stripos(PHP_OS, "win") === 0);
     }
 
-    public function reRunSuite()
+    public function reRunSuite(): void
     {
         $args = $_SERVER['argv'];
         $command = $this->buildArgString() . escapeshellarg($this->getExecutablePath()) . ' ' . join(' ', array_map('escapeshellarg', $args));
@@ -56,7 +51,7 @@ class WindowsPassthruReRunner extends PhpExecutableReRunner
         exit($exitCode);
     }
 
-    private function buildArgString()
+    private function buildArgString() : string
     {
         $argstring = '';
 

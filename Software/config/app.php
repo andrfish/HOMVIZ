@@ -119,7 +119,7 @@ return [
         Illuminate\Bus\BusServiceProvider::class,
         Illuminate\Cache\CacheServiceProvider::class,
         Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
-        Illuminate\Routing\ControllerServiceProvider::class,
+/*        Illuminate\Routing\ControllerServiceProvider::class,*/
         Illuminate\Cookie\CookieServiceProvider::class,
         Illuminate\Database\DatabaseServiceProvider::class,
         Illuminate\Encryption\EncryptionServiceProvider::class,
@@ -137,7 +137,7 @@ return [
         Illuminate\Validation\ValidationServiceProvider::class,
         Illuminate\View\ViewServiceProvider::class,
         Collective\Html\HtmlServiceProvider::class,
-        Barryvdh\Cors\ServiceProvider::class,
+/*        Barryvdh\Cors\ServiceProvider::class,*/
         /*
          * Application Service Providers...
          */
@@ -145,9 +145,8 @@ return [
         App\Providers\AuthServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        Barryvdh\DomPDF\ServiceProvider::class,
+/*        Barryvdh\DomPDF\ServiceProvider::class,*/
         Laracasts\Flash\FlashServiceProvider::class
-
     ],
 
     /*

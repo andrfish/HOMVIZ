@@ -14,10 +14,11 @@
 namespace PhpSpec\Wrapper\Subject;
 
 use PhpSpec\Loader\Node\ExampleNode;
-use PhpSpec\Matcher\MatcherInterface;
+use PhpSpec\Matcher\Matcher;
 use PhpSpec\Wrapper\Subject\Expectation\ConstructorDecorator;
 use PhpSpec\Wrapper\Subject\Expectation\DispatcherDecorator;
-use PhpSpec\Wrapper\Subject\Expectation\ExpectationInterface;
+use PhpSpec\Wrapper\Subject\Expectation\Expectation;
+use PhpSpec\Wrapper\Subject\Expectation\ThrowExpectation;
 use PhpSpec\Wrapper\Subject\Expectation\UnwrapDecorator;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use PhpSpec\Runner\MatcherManager;
@@ -38,11 +39,7 @@ class ExpectationFactory
      */
     private $matchers;
 
-    /**
-     * @param ExampleNode              $example
-     * @param EventDispatcherInterface $dispatcher
-     * @param MatcherManager           $matchers
-     */
+    
     public function __construct(ExampleNode $example, EventDispatcherInterface $dispatcher, MatcherManager $matchers)
     {
         $this->example = $example;
@@ -50,14 +47,8 @@ class ExpectationFactory
         $this->matchers = $matchers;
     }
 
-    /**
-     * @param string $expectation
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return ExpectationInterface
-     */
-    public function create($expectation, $subject, array $arguments = array())
+    
+    public function create(string $expectation, $subject, array $arguments = array()): Expectation
     {
         if (0 === strpos($expectation, 'shouldNot')) {
             return $this->createNegative(lcfirst(substr($expectation, 9)), $subject, $arguments);
@@ -66,70 +57,55 @@ class ExpectationFactory
         if (0 === strpos($expectation, 'should')) {
             return $this->createPositive(lcfirst(substr($expectation, 6)), $subject, $arguments);
         }
+
+        throw new \RuntimeException('Could not create match');
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return ExpectationInterface
-     */
-    private function createPositive($name, $subject, array $arguments = array())
+    
+    private function createPositive(string $name, $subject, array $arguments = array()): Expectation
     {
         if (strtolower($name) === 'throw') {
             return $this->createDecoratedExpectation("PositiveThrow", $name, $subject, $arguments);
         }
 
+        if (strtolower($name) === 'trigger') {
+            return $this->createDecoratedExpectation("PositiveTrigger", $name, $subject, $arguments);
+        }
+
         return $this->createDecoratedExpectation("Positive", $name, $subject, $arguments);
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return ExpectationInterface
-     */
-    private function createNegative($name, $subject, array $arguments = array())
+    
+    private function createNegative(string $name, $subject, array $arguments = array()): Expectation
     {
         if (strtolower($name) === 'throw') {
             return $this->createDecoratedExpectation("NegativeThrow", $name, $subject, $arguments);
         }
 
+        if (strtolower($name) === 'trigger') {
+            return $this->createDecoratedExpectation("NegativeTrigger", $name, $subject, $arguments);
+        }
+
         return $this->createDecoratedExpectation("Negative", $name, $subject, $arguments);
     }
 
-    /**
-     * @param string $expectation
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return ExpectationInterface
-     */
-    private function createDecoratedExpectation($expectation, $name, $subject, array $arguments)
+    
+    private function createDecoratedExpectation(string $expectation, string $name, $subject, array $arguments): Expectation
     {
         $matcher = $this->findMatcher($name, $subject, $arguments);
         $expectation = "\\PhpSpec\\Wrapper\\Subject\\Expectation\\".$expectation;
 
         $expectation = new $expectation($matcher);
 
-        if ($expectation instanceof Expectation\ThrowExpectation) {
+        if ($expectation instanceof ThrowExpectation) {
             return $expectation;
         }
 
         return $this->decoratedExpectation($expectation, $matcher);
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return MatcherInterface
-     */
-    private function findMatcher($name, $subject, array $arguments = array())
+    
+    private function findMatcher(string $name, $subject, array $arguments = array()): Matcher
     {
         $unwrapper = new Unwrapper();
         $arguments = $unwrapper->unwrapAll($arguments);
@@ -137,13 +113,8 @@ class ExpectationFactory
         return $this->matchers->find($name, $subject, $arguments);
     }
 
-    /**
-     * @param ExpectationInterface $expectation
-     * @param MatcherInterface     $matcher
-     *
-     * @return ConstructorDecorator
-     */
-    private function decoratedExpectation(ExpectationInterface $expectation, MatcherInterface $matcher)
+    
+    private function decoratedExpectation(Expectation $expectation, Matcher $matcher): ConstructorDecorator
     {
         $dispatcherDecorator = new DispatcherDecorator($expectation, $this->dispatcher, $matcher, $this->example);
         $unwrapperDecorator = new UnwrapDecorator($dispatcherDecorator, new Unwrapper());

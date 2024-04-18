@@ -3,14 +3,17 @@
 namespace PhpSpec\CodeGenerator\Generator;
 
 use PhpSpec\Event\FileCreationEvent;
-use PhpSpec\Locator\ResourceInterface;
+use PhpSpec\Locator\Resource;
+use PhpSpec\Util\DispatchTrait;
 use PhpSpec\Util\Filesystem;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
-class NewFileNotifyingGenerator implements GeneratorInterface
+final class NewFileNotifyingGenerator implements Generator
 {
+    use DispatchTrait;
+
     /**
-     * @var GeneratorInterface
+     * @var Generator
      */
     private $generator;
 
@@ -24,35 +27,20 @@ class NewFileNotifyingGenerator implements GeneratorInterface
      */
     private $filesystem;
 
-    /**
-     * @param GeneratorInterface $generator
-     * @param EventDispatcherInterface $dispatcher
-     * @param Filesystem $filesystem
-     */
-    public function __construct(GeneratorInterface $generator, EventDispatcherInterface $dispatcher, Filesystem $filesystem = null)
+    
+    public function __construct(Generator $generator, EventDispatcherInterface $dispatcher, Filesystem $filesystem)
     {
         $this->generator = $generator;
         $this->dispatcher = $dispatcher;
-        $this->filesystem = $filesystem ?: new Filesystem();
+        $this->filesystem = $filesystem;
     }
 
-    /**
-     * @param ResourceInterface $resource
-     * @param string $generation
-     * @param array $data
-     *
-     * @return bool
-     */
-    public function supports(ResourceInterface $resource, $generation, array $data)
+    public function supports(Resource $resource, string $generation, array $data): bool
     {
         return $this->generator->supports($resource, $generation, $data);
     }
 
-    /**
-     * @param ResourceInterface $resource
-     * @param array $data
-     */
-    public function generate(ResourceInterface $resource, array $data)
+    public function generate(Resource $resource, array $data): void
     {
         $filePath = $this->getFilePath($resource);
 
@@ -63,19 +51,12 @@ class NewFileNotifyingGenerator implements GeneratorInterface
         $this->dispatchEventIfFileWasCreated($fileExisted, $filePath);
     }
 
-    /**
-     * @return int
-     */
-    public function getPriority()
+    public function getPriority(): int
     {
         return $this->generator->getPriority();
     }
 
-    /**
-     * @param ResourceInterface $resource
-     * @return string
-     */
-    private function getFilePath(ResourceInterface $resource)
+    private function getFilePath(Resource $resource): string
     {
         if ($this->generator->supports($resource, 'specification', array())) {
             return $resource->getSpecFilename();
@@ -84,24 +65,16 @@ class NewFileNotifyingGenerator implements GeneratorInterface
         return $resource->getSrcFilename();
     }
 
-    /**
-     * @param string $filePath
-     * @return bool
-     */
-    private function fileExists($filePath)
+    private function fileExists(string $filePath): bool
     {
         return $this->filesystem->pathExists($filePath);
     }
 
-    /**
-     * @param bool $fileExisted
-     * @param string $filePath
-     */
-    private function dispatchEventIfFileWasCreated($fileExisted, $filePath)
+    private function dispatchEventIfFileWasCreated(bool $fileExisted, string $filePath): void
     {
         if (!$fileExisted && $this->fileExists($filePath)) {
             $event = new FileCreationEvent($filePath);
-            $this->dispatcher->dispatch('afterFileCreation', $event);
+            $this->dispatch($this->dispatcher, $event, 'afterFileCreation');
         }
     }
 }

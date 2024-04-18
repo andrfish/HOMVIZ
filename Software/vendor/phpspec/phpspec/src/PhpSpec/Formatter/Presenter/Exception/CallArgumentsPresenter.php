@@ -25,19 +25,14 @@ class CallArgumentsPresenter
      */
     private $differ;
 
-    /**
-     * @param Differ $differ
-     */
+    
     public function __construct(Differ $differ)
     {
         $this->differ = $differ;
     }
 
-    /**
-     * @param UnexpectedCallException $exception
-     * @return string
-     */
-    public function presentDifference(UnexpectedCallException $exception)
+    
+    public function presentDifference(UnexpectedCallException $exception): string
     {
         $actualArguments = $exception->getArguments();
         $methodProphecies = $exception->getObjectProphecy()->getMethodProphecies($exception->getMethodName());
@@ -47,7 +42,7 @@ class CallArgumentsPresenter
         }
 
         $presentedMethodProphecy = $this->findFirstUnexpectedArgumentsCallProphecy($methodProphecies, $exception);
-        if (is_null($presentedMethodProphecy)) {
+        if (\is_null($presentedMethodProphecy)) {
             return '';
         }
 
@@ -64,23 +59,21 @@ class CallArgumentsPresenter
 
     /**
      * @param MethodProphecy[] $methodProphecies
-     * @return bool
      */
-    private function noMethodPropheciesForUnexpectedCall(array $methodProphecies)
+    private function noMethodPropheciesForUnexpectedCall(array $methodProphecies): bool
     {
-        return count($methodProphecies) === 0;
+        return \count($methodProphecies) === 0;
     }
 
     /**
      * @param MethodProphecy[] $methodProphecies
-     * @param UnexpectedCallException $exception
      *
-     * @return MethodProphecy
+     * @return null|MethodProphecy
      */
     private function findFirstUnexpectedArgumentsCallProphecy(
         array $methodProphecies,
         UnexpectedCallException $exception
-    ) {
+    ){
         $objectProphecy = $exception->getObjectProphecy();
 
         foreach ($methodProphecies as $methodProphecy) {
@@ -89,31 +82,24 @@ class CallArgumentsPresenter
                 $methodProphecy->getArgumentsWildcard()
             );
 
-            if (count($calls)) {
+            if (\count($calls)) {
                 continue;
             }
 
             return $methodProphecy;
         }
+
+        return null;
     }
 
-    /**
-     * @param array $expectedTokens
-     * @param array $actualArguments
-     *
-     * @return bool
-     */
-    private function parametersCountMismatch(array $expectedTokens, array $actualArguments)
+    
+    private function parametersCountMismatch(array $expectedTokens, array $actualArguments): bool
     {
-        return count($expectedTokens) !== count($actualArguments);
+        return \count($expectedTokens) !== \count($actualArguments);
     }
 
-    /**
-     * @param array $tokens
-     *
-     * @return array
-     */
-    private function convertArgumentTokensToDiffableValues(array $tokens)
+    
+    private function convertArgumentTokensToDiffableValues(array $tokens): array
     {
         $values = array();
         foreach ($tokens as $token) {
@@ -127,19 +113,14 @@ class CallArgumentsPresenter
         return $values;
     }
 
-    /**
-     * @param array $actualArguments
-     * @param array $expectedArguments
-     *
-     * @return string
-     */
-    private function generateArgumentsDifferenceText(array $actualArguments, array $expectedArguments)
+    
+    private function generateArgumentsDifferenceText(array $actualArguments, array $expectedArguments): string
     {
         $text = '';
         foreach($actualArguments as $i => $actualArgument) {
             $expectedArgument = $expectedArguments[$i];
-            $actualArgument = is_null($actualArgument) ? 'null' : $actualArgument;
-            $expectedArgument = is_null($expectedArgument) ? 'null' : $expectedArgument;
+            $actualArgument = \is_null($actualArgument) ? 'null' : $actualArgument;
+            $expectedArgument = \is_null($expectedArgument) ? 'null' : $expectedArgument;
 
             $text .= $this->differ->compare($expectedArgument, $actualArgument);
         }

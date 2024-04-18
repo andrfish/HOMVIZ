@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 
-use Input;
+use Illuminate\Support\Facades\Request;
 use Validator;
 use Redirect;
 use Hash;
-use Request;
 use Route;
 use Response;
 use Auth;
@@ -49,19 +48,19 @@ class UsersController extends Controller
     public function postRegistration()
     {
 
-        $username = Input::get('username');
+        $username = Request::get('username');
         $u = User::where('username',$username)->first();
 
         if ($u===null) {
 
             $user = new User;
             $user->username = $username;
-            $user->email = Input::get('email');
-            $user->age = Input::get('age');
-            $user->gender = Input::get('gender');
-            $user->password = Hash::make(Input::get('password')); 
+            $user->email = Request::get('email');
+            $user->age = Request::get('age');
+            $user->gender = Request::get('gender');
+            $user->password = Hash::make(Request::get('password')); 
             $user->save();
-            Auth::attempt(array('username'=> $user->username, 'password'=>Input::get('password')));
+            Auth::attempt(array('username'=> $user->username, 'password'=>Request::get('password')));
 
         } else {
 
@@ -82,8 +81,8 @@ class UsersController extends Controller
     public function postLogin()
     {
 
-        $username = Input::get('username');
-        $password = Input::get('password');
+        $username = Request::get('username');
+        $password = Request::get('password');
 
         $u = User::where('username',$username)->first();
 
@@ -112,7 +111,7 @@ class UsersController extends Controller
     public function postCheckUsername()
     {   
        
-        $username = Input::get('username');
+        $username = Request::get('username');
 
         $db_username = User::where('username',$username)->first();
         $status = 400;

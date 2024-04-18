@@ -13,44 +13,65 @@
 
 namespace PhpSpec\Loader;
 
+use PhpSpec\Event\ResourceEvent;
+use PhpSpec\Locator\Resource;
+use PhpSpec\Specification\ErrorSpecification;
+use PhpSpec\Util\DispatchTrait;
 use PhpSpec\Util\MethodAnalyser;
-use PhpSpec\Locator\ResourceManagerInterface;
+use PhpSpec\Locator\ResourceManager;
 use ReflectionClass;
 use ReflectionMethod;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ResourceLoader
 {
+    use DispatchTrait;
+
     /**
-     * @var ResourceManagerInterface
+     * @var ResourceManager
      */
     private $manager;
+
     /**
      * @var MethodAnalyser
      */
     private $methodAnalyser;
 
     /**
-     * @param ResourceManagerInterface $manager
+     * @var EventDispatcherInterface
      */
-    public function __construct(ResourceManagerInterface $manager, MethodAnalyser $methodAnalyser = null)
-    {
+    private $eventDispatcher;
+
+    public function __construct(
+        ResourceManager $manager,
+        MethodAnalyser $methodAnalyser,
+        EventDispatcherInterface $eventDispatcher
+    ) {
         $this->manager = $manager;
-        $this->methodAnalyser = $methodAnalyser ?: new MethodAnalyser();
+        $this->methodAnalyser = $methodAnalyser;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
-    /**
-     * @param string       $locator
-     * @param integer|null $line
-     *
-     * @return Suite
-     */
-    public function load($locator, $line = null)
+    public function load(string $locator = '', int $line = null): Suite
     {
         $suite = new Suite();
         foreach ($this->manager->locateResources($locator) as $resource) {
             if (!class_exists($resource->getSpecClassname(), false) && is_file($resource->getSpecFilename())) {
-                require_once StreamWrapper::wrapPath($resource->getSpecFilename());
+                try {
+                    require_once StreamWrapper::wrapPath($resource->getSpecFilename());
+                }
+                catch (\Error $e) {
+                    $this->addErrorThrowingExampleToSuite($resource, $suite, $e);
+                    continue;
+                }
+            } else {
+                $this->dispatch(
+                    $this->eventDispatcher,
+                    ResourceEvent::ignored($resource),
+                    'resourceIgnored'
+                );
             }
+
             if (!class_exists($resource->getSpecClassname(), false)) {
                 continue;
             }
@@ -60,7 +81,7 @@ class ResourceLoader
             if ($reflection->isAbstract()) {
                 continue;
             }
-            if (!$reflection->implementsInterface('PhpSpec\SpecificationInterface')) {
+            if (!$reflection->implementsInterface('PhpSpec\Specification')) {
                 continue;
             }
 
@@ -88,16 +109,27 @@ class ResourceLoader
         return $suite;
     }
 
-    /**
-     * @param int              $line
-     * @param ReflectionMethod $method
-     *
-     * @return bool
-     */
-    private function lineIsInsideMethod($line, ReflectionMethod $method)
+
+    private function lineIsInsideMethod(int $line, ReflectionMethod $method): bool
     {
-        $line = intval($line);
+        $line = \intval($line);
 
         return $line >= $method->getStartLine() && $line <= $method->getEndLine();
+    }
+
+    private function addErrorThrowingExampleToSuite(Resource $resource, Suite $suite, \Error $error)
+    {
+        $reflection = new ReflectionClass(ErrorSpecification::class);
+        $spec = new Node\SpecificationNode($resource->getSrcClassname(), $reflection, $resource);
+
+        $errorFunction = new \ReflectionFunction(
+            function () use ($error) {
+                throw $error;
+            }
+        );
+        $example = new Node\ExampleNode('Loading specification', $errorFunction);
+
+        $spec->addExample($example);
+        $suite->addSpecification($spec);
     }
 }

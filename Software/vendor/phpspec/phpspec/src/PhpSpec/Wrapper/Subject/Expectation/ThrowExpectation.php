@@ -13,13 +13,8 @@
 
 namespace PhpSpec\Wrapper\Subject\Expectation;
 
-interface ThrowExpectation
+interface ThrowExpectation extends Expectation
 {
-    /**
-     * @param string $method
-     * @param array  $arguments
-     *
-     * @return mixed
-     */
-    public function during($method, array $arguments = array());
+    
+    public function during(string $method, array $arguments = array());
 }

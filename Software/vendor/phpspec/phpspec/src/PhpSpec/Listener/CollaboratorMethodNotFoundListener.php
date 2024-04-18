@@ -14,23 +14,23 @@
 namespace PhpSpec\Listener;
 
 use PhpSpec\CodeGenerator\GeneratorManager;
-use PhpSpec\Console\IO;
+use PhpSpec\Console\ConsoleIO;
 use PhpSpec\Event\ExampleEvent;
 use PhpSpec\Event\SuiteEvent;
 use PhpSpec\Exception\Locator\ResourceCreationException;
-use PhpSpec\Locator\ResourceManagerInterface;
-use PhpSpec\Util\NameCheckerInterface;
-use PhpSpec\Util\ReservedWordsMethodNameChecker;
+use PhpSpec\Locator\ResourceManager;
+use PhpSpec\Util\NameChecker;
 use Prophecy\Argument\ArgumentsWildcard;
 use Prophecy\Exception\Doubler\MethodNotFoundException;
+use Prophecy\Prophecy\ObjectProphecy;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
+final class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
 {
     const PROMPT = 'Would you like me to generate a method signature `%s::%s()` for you?';
 
     /**
-     * @var IO
+     * @var ConsoleIO
      */
     private $io;
 
@@ -40,7 +40,7 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
     private $interfaces = array();
 
     /**
-     * @var ResourceManagerInterface
+     * @var ResourceManager
      */
     private $resources;
 
@@ -50,7 +50,7 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
     private $generator;
 
     /**
-     * @var NameCheckerInterface
+     * @var NameChecker
      */
     private $nameChecker;
 
@@ -59,28 +59,21 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
      */
     private $wrongMethodNames = array();
 
-    /**
-     * @param IO $io
-     * @param ResourceManagerInterface $resources
-     * @param GeneratorManager $generator
-     * @param NameCheckerInterface $nameChecker
-     */
+
     public function __construct(
-        IO $io,
-        ResourceManagerInterface $resources,
+        ConsoleIO $io,
+        ResourceManager $resources,
         GeneratorManager $generator,
-        NameCheckerInterface $nameChecker = null
+        NameChecker $nameChecker
     ) {
         $this->io = $io;
         $this->resources = $resources;
         $this->generator = $generator;
-        $this->nameChecker = $nameChecker ?: new ReservedWordsMethodNameChecker();
+        $this->nameChecker = $nameChecker;
     }
 
-    /**
-     * @return array
-     */
-    public static function getSubscribedEvents()
+
+    public static function getSubscribedEvents(): array
     {
         return array(
             'afterExample' => array('afterExample', 10),
@@ -88,16 +81,28 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
         );
     }
 
-    /**
-     * @param ExampleEvent $event
-     */
-    public function afterExample(ExampleEvent $event)
+
+    public function afterExample(ExampleEvent $event): void
     {
         if (!$exception = $this->getMethodNotFoundException($event)) {
             return;
         }
 
-        if (!$interface = $this->getDoubledInterface($exception->getClassName())) {
+        $className = $exception->getClassName();
+
+        // Prophecy sometimes throws the exception with the Prophecy rather than the FCQN - in these cases we need to parse the error
+        if ($className instanceof ObjectProphecy) {
+
+            $classPattern = '[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*'; //from https://www.php.net/manual/en/language.oop5.basic.php
+            $fcqnPattern = "(?:$classPattern)(?:\\\\$classPattern)*)";
+            $method = preg_quote($exception->getMethodName());
+
+            if(preg_match("/(?<fcqn>$fcqnPattern::$method\(/", $exception->getMessage(), $matches)) {
+                $className = $matches['fcqn'];
+            }
+        }
+
+        if (!$interface = $this->getDoubledInterface($className)) {
             return;
         }
 
@@ -111,32 +116,31 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
     }
 
     /**
-     * @param string $classname
+     * @param mixed $class
      * @return mixed
      */
-    private function getDoubledInterface($classname)
+    private function getDoubledInterface($class)
     {
-        if (class_parents($classname) !== array('stdClass'=>'stdClass')) {
+        if (class_parents($class) !== array(\stdClass::class=>\stdClass::class)) {
             return;
         }
 
-        $interfaces = array_filter(class_implements($classname),
+        $interfaces = array_filter(class_implements($class),
+            /** @param string $interface */
             function ($interface) {
                 return !preg_match('/^Prophecy/', $interface);
             }
         );
 
-        if (count($interfaces) !== 1) {
+        if (\count($interfaces) !== 1) {
             return;
         }
 
         return current($interfaces);
     }
 
-    /**
-     * @param SuiteEvent $event
-     */
-    public function afterSuite(SuiteEvent $event)
+
+    public function afterSuite(SuiteEvent $event): void
     {
         foreach ($this->interfaces as $interface => $methods) {
             try {
@@ -146,7 +150,7 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
             }
 
             foreach ($methods as $method => $arguments) {
-                if (in_array($method, $this->wrongMethodNames)) {
+                if (\in_array($method, $this->wrongMethodNames)) {
                     continue;
                 }
 
@@ -170,11 +174,11 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
         }
     }
 
+
     /**
      * @param mixed $prophecyArguments
-     * @return array
      */
-    private function getRealArguments($prophecyArguments)
+    private function getRealArguments($prophecyArguments): array
     {
         if ($prophecyArguments instanceof ArgumentsWildcard) {
             return $prophecyArguments->getTokens();
@@ -184,8 +188,8 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
     }
 
     /**
-     * @param ExampleEvent $event
-     * @return bool
+     * @psalm-suppress InvalidReturnType
+     * @return MethodNotFoundException|void
      */
     private function getMethodNotFoundException(ExampleEvent $event)
     {
@@ -196,14 +200,17 @@ class CollaboratorMethodNotFoundListener implements EventSubscriberInterface
         }
     }
 
-    private function checkIfMethodNameAllowed($methodName)
+    /**
+     * @param string $methodName
+     */
+    private function checkIfMethodNameAllowed($methodName): void
     {
         if (!$this->nameChecker->isNameValid($methodName)) {
             $this->wrongMethodNames[] = $methodName;
         }
     }
 
-    private function writeErrorMessage()
+    private function writeErrorMessage(): void
     {
         foreach ($this->wrongMethodNames as $methodName) {
             $message = sprintf("I cannot generate the method '%s' for you because it is a reserved keyword", $methodName);

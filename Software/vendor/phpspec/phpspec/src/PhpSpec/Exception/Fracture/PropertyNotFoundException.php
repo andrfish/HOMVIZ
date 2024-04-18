@@ -19,9 +19,7 @@ namespace PhpSpec\Exception\Fracture;
  */
 class PropertyNotFoundException extends FractureException
 {
-    /**
-     * @var mixed
-     */
+    
     private $subject;
 
     /**
@@ -30,11 +28,9 @@ class PropertyNotFoundException extends FractureException
     private $property;
 
     /**
-     * @param string $message
-     * @param mixed  $subject
      * @param string $property
      */
-    public function __construct($message, $subject, $property)
+    public function __construct(string $message, $subject, $property)
     {
         parent::__construct($message);
 
@@ -42,18 +38,14 @@ class PropertyNotFoundException extends FractureException
         $this->property  = $property;
     }
 
-    /**
-     * @return mixed
-     */
+    
     public function getSubject()
     {
         return $this->subject;
     }
 
-    /**
-     * @return string
-     */
-    public function getProperty()
+    
+    public function getProperty(): string
     {
         return $this->property;
     }

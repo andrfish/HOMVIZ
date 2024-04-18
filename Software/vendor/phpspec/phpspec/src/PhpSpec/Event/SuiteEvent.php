@@ -14,12 +14,11 @@
 namespace PhpSpec\Event;
 
 use PhpSpec\Loader\Suite;
-use Symfony\Component\EventDispatcher\Event;
 
 /**
  * Class SuiteEvent holds information about the suite event
  */
-class SuiteEvent extends Event implements EventInterface
+class SuiteEvent extends BaseEvent implements PhpSpecEvent
 {
     /**
      * @var Suite
@@ -32,65 +31,53 @@ class SuiteEvent extends Event implements EventInterface
     private $time;
 
     /**
-     * @var integer
+     * @var int
      */
     private $result;
 
     /**
-     * @var boolean
+     * @var bool
      */
     private $worthRerunning = false;
 
-    /**
-     * @param Suite   $suite
-     * @param float   $time
-     * @param integer $result
-     */
-    public function __construct(Suite $suite, $time = null, $result = null)
+    
+    public function __construct(Suite $suite, float $time = 0.0, int $result = 0)
     {
         $this->suite  = $suite;
         $this->time   = $time;
         $this->result = $result;
     }
 
-    /**
-     * @return Suite
-     */
-    public function getSuite()
+    
+    public function getSuite(): Suite
     {
         return $this->suite;
     }
 
-    /**
-     * @return float
-     */
-    public function getTime()
+    
+    public function getTime(): float
     {
         return $this->time;
     }
 
-    /**
-     * @return integer
-     */
-    public function getResult()
+    
+    public function getResult(): int
     {
         return $this->result;
     }
 
-    /**
-     * @return bool
-     */
-    public function isWorthRerunning()
+    
+    public function isWorthRerunning(): bool
     {
         return $this->worthRerunning;
     }
 
-    public function markAsWorthRerunning()
+    public function markAsWorthRerunning(): void
     {
         $this->worthRerunning = true;
     }
 
-    public function markAsNotWorthRerunning()
+    public function markAsNotWorthRerunning(): void
     {
         $this->worthRerunning = false;
     }

@@ -13,14 +13,11 @@
 
 namespace PhpSpec\Wrapper\Subject\Expectation;
 
-class PositiveThrow extends DuringCall implements ThrowExpectation
+final class PositiveThrow extends DuringCall implements ThrowExpectation
 {
     /**
      * @param object $object
      * @param string $method
-     * @param array  $arguments
-     *
-     * @return mixed
      */
     protected function runDuring($object, $method, array $arguments = array())
     {

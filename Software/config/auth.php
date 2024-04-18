@@ -63,5 +63,22 @@ return [
         'table' => 'password_resets',
         'expire' => 60,
     ],
-
+'defaults' => [
+    'guard' => 'web',
+    'passwords' => 'users',
+],
+'guards' => [
+    'web' => [
+        'driver' => 'session',
+        'provider' => 'users',
+    ],
+    // Define other guards as needed
+],
+'providers' => [
+    'users' => [
+        'driver' => 'eloquent',
+        'model' => App\User::class,
+    ],
+    // Other providers...
+]
 ];

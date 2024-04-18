@@ -13,58 +13,41 @@
 
 namespace PhpSpec\Matcher;
 
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
 use PhpSpec\Exception\Example\NotEqualException;
 use PhpSpec\Exception\Example\FailureException;
 
-class ComparisonMatcher extends BasicMatcher
+final class ComparisonMatcher extends BasicMatcher
 {
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
 
-    /**
-     * @param PresenterInterface $presenter
-     */
-    public function __construct(PresenterInterface $presenter)
+    
+    public function __construct(Presenter $presenter)
     {
         $this->presenter = $presenter;
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return bool
-     */
-    public function supports($name, $subject, array $arguments)
+    
+    public function supports(string $name, $subject, array $arguments): bool
     {
         return 'beLike' === $name
-            && 1 == count($arguments)
+            && 1 == \count($arguments)
         ;
     }
 
-    /**
-     * @param mixed $subject
-     * @param array $arguments
-     *
-     * @return bool
-     */
-    protected function matches($subject, array $arguments)
+    
+    protected function matches($subject, array $arguments): bool
     {
         return $subject == $arguments[0];
     }
 
     /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
      * @return NotEqualException
      */
-    protected function getFailureException($name, $subject, array $arguments)
+    protected function getFailureException(string $name, $subject, array $arguments): FailureException
     {
         return new NotEqualException(sprintf(
             'Expected %s, but got %s.',
@@ -73,14 +56,8 @@ class ComparisonMatcher extends BasicMatcher
         ), $arguments[0], $subject);
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return FailureException
-     */
-    protected function getNegativeFailureException($name, $subject, array $arguments)
+    
+    protected function getNegativeFailureException(string $name, $subject, array $arguments): FailureException
     {
         return new FailureException(sprintf(
             'Did not expect %s, but got one.',

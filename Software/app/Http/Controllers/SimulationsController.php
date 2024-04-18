@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Input;
+use Illuminate\Support\Facades\Request;
 use Validator;
 use Redirect;
 use Hash;
@@ -40,7 +39,7 @@ class SimulationsController extends Controller
     public function postprogressUpdate()
     {   
 
-        $ids = Input::get('ids');
+        $ids = Request::get('ids');
 
         $status = 400;
         $serverkey = env("SERVER_KEY");
@@ -62,7 +61,7 @@ class SimulationsController extends Controller
 
                 if ($simulation->status==0) {
 
-                    $url = 'http://216.36.166.133:2222/api/v1/simulation/create';
+                    $url = 'http://127.0.0.1:2024/api/v1/simulation/create';
                     
                     $opts = [
                         "http" => [
@@ -93,7 +92,7 @@ class SimulationsController extends Controller
 
                 } elseif ($simulation->status==2) {
                     
-                    $url = 'http://216.36.166.133:2222/api/v1/simulation/status';
+                    $url = 'http://127.0.0.1:2024/api/v1/simulation/status';
 
                     // Create a stream
                     $opts = [
@@ -119,7 +118,7 @@ class SimulationsController extends Controller
 
                         $output[$simulation->id]['status']=1;
 
-                        $url = 'http://216.36.166.133:2222/api/v1/simulation/result';
+                        $url = 'http://127.0.0.1:2024/api/v1/simulation/result';
                         $opts = [
                             "http" => [
                                 "method" => "POST",
@@ -205,19 +204,19 @@ class SimulationsController extends Controller
     public function postAdd()
     {
 
-        $scenarios = Input::get('scenarios');
-        $resources = Input::get('resources');
-        $subresources = Input::get('subresources');
-        $states = Input::get('states');
+        $scenarios = Request::get('scenarios');
+        $resources = Request::get('resources');
+        $subresources = Request::get('subresources');
+        $states = Request::get('states');
 
         //Merge resources and subresrouces
         $resources = Simulation::EditResourcesObject($resources,$subresources);
 
-        $allowedPopulation = Input::get('allowedPopulation');
-        $initialPopulation = Input::get('initialPopulation');
-        $maximumlengthofstay = Input::get('maximumlengthofstay');
+        $allowedPopulation = Request::get('allowedPopulation');
+        $initialPopulation = Request::get('initialPopulation');
+        $maximumlengthofstay = Request::get('maximumlengthofstay');
 
-        $capacity = Input::get('capacity');
+        $capacity = Request::get('capacity');
 
         $resources = Simulation::mergeResourcesPropreties($resources, $allowedPopulation, 'allowedpopulation');
         $resources = Simulation::mergeResourcesPropreties($resources, $initialPopulation, 'initialPopulation');
@@ -228,11 +227,11 @@ class SimulationsController extends Controller
         $states = Simulation::mergeStatesPropreties($states, $initialPopulation, 'initialPopulation');
 
         $creatorname = 'none';
-        $numberofweeks = Input::get('numberofweeks');
-        $numberofsims = Input::get('numberofsims');
-        $populationType = Input::get('populationType');
-        $simulation_name = Input::get('simulation_name');
-        $simulation_location = Input::get('simulation_location');
+        $numberofweeks =Request::get('numberofweeks');
+        $numberofsims = Request::get('numberofsims');
+        $populationType = Request::get('populationType');
+        $simulation_name = Request::get('simulation_name');
+        $simulation_location = Request::get('simulation_location');
 
         $output = array();
 
@@ -249,11 +248,11 @@ class SimulationsController extends Controller
         $sim = new Simulation();
         $sim->user_id = Auth::user()->id;
         $sim->data = json_encode($output);
-        $sim->population_content = json_encode(Input::get('populationTypeCount'));
+        $sim->population_content = json_encode(Request::get('populationTypeCount'));
 
         //for survey
-        $sim->stopwatch = Input::get('stopwatch');
-        $sim->videosliderwatches = Input::get('videosliderwatches');
+        $sim->stopwatch = Request::get('stopwatch');
+        $sim->videosliderwatches = Request::get('videosliderwatches');
         
         $sim->save();
 
@@ -265,7 +264,7 @@ class SimulationsController extends Controller
     {
 
         $status = 400;
-        $sim_id = Input::get('sim_id');
+        $sim_id = Request::get('sim_id');
         $sim = Simulation::where('id',$sim_id)->where('user_id',Auth::user()->id)->first();
 
         if (isset($sim) && !empty($sim)) {

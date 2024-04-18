@@ -20,35 +20,20 @@ final class InMemoryTypeHintIndex implements TypeHintIndex
      */
     private $typehints = array();
 
-    /**
-     * @param string $class
-     * @param string $method
-     * @param string $argument
-     * @param string $typehint
-     */
-    public function add($class, $method, $argument, $typehint)
+    
+    public function add(string $class, string $method, string $argument, string $typehint): void
     {
         $this->store($class, $method, $argument, $typehint);
     }
 
-    /**
-     * @param string $class
-     * @param string $method
-     * @param string $argument
-     * @param \Exception $exception
-     */
-    public function addInvalid($class, $method, $argument, \Exception $exception)
+    
+    public function addInvalid(string $class, string $method, string $argument, \Exception $exception): void
     {
         $this->store($class, $method, $argument, $exception);
     }
 
-    /**
-     * @param string $class
-     * @param string $method
-     * @param string $argument
-     * @param mixed $typehint
-     */
-    private function store($class, $method, $argument, $typehint)
+    
+    private function store(string $class, string $method, string $argument, $typehint): void
     {
         $class = strtolower($class);
         $method = strtolower($method);
@@ -65,20 +50,16 @@ final class InMemoryTypeHintIndex implements TypeHintIndex
     }
 
     /**
-     * @param string $class
-     * @param string $method
-     * @param string $argument
-     *
-     * @return string|null
+     * @return ?string
      */
-    public function lookup($class, $method, $argument)
+    public function lookup(string $class, string $method, string $argument)
     {
         $class = strtolower($class);
         $method = strtolower($method);
         $argument = strtolower($argument);
 
         if (!isset($this->typehints[$class][$method][$argument])) {
-            return false;
+            return null;
         }
 
         if ($this->typehints[$class][$method][$argument] instanceof \Exception) {

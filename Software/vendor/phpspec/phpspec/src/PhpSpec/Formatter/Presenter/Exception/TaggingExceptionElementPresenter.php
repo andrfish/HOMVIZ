@@ -28,21 +28,15 @@ final class TaggingExceptionElementPresenter implements ExceptionElementPresente
      */
     private $valuePresenter;
 
-    /**
-     * @param ExceptionTypePresenter $exceptionTypePresenter
-     * @param ValuePresenter $valuePresenter
-     */
+    
     public function __construct(ExceptionTypePresenter $exceptionTypePresenter, ValuePresenter $valuePresenter)
     {
         $this->exceptionTypePresenter = $exceptionTypePresenter;
         $this->valuePresenter = $valuePresenter;
     }
 
-    /**
-     * @param \Exception $exception
-     * @return string
-     */
-    public function presentExceptionThrownMessage(\Exception $exception)
+    
+    public function presentExceptionThrownMessage(\Exception $exception): string
     {
         return sprintf(
             'Exception <label>%s</label> has been thrown.',
@@ -50,42 +44,26 @@ final class TaggingExceptionElementPresenter implements ExceptionElementPresente
         );
     }
 
-    /**
-     * @param string $number
-     * @param string $line
-     * @return string
-     */
-    public function presentCodeLine($number, $line)
+    
+    public function presentCodeLine(string $number, string $line): string
     {
         return sprintf('<lineno>%s</lineno> <code>%s</code>', $number, $line);
     }
 
-    /**
-     * @param string $line
-     * @return string
-     */
-    public function presentHighlight($line)
+    
+    public function presentHighlight(string $line): string
     {
         return sprintf('<hl>%s</hl>', $line);
     }
 
-    /**
-     * @param string $header
-     * @return string
-     */
-    public function presentExceptionTraceHeader($header)
+    
+    public function presentExceptionTraceHeader(string $header): string
     {
         return sprintf('<trace>%s</trace>', $header);
     }
 
-    /**
-     * @param string $class
-     * @param string $type
-     * @param string $method
-     * @param array $args
-     * @return string
-     */
-    public function presentExceptionTraceMethod($class, $type, $method, array $args)
+    
+    public function presentExceptionTraceMethod(string $class, string $type, string $method, array $args): string
     {
         $template = '   <trace><trace-class>%s</trace-class><trace-type>%s</trace-type>'.
             '<trace-func>%s</trace-func>(<trace-args>%s</trace-args>)</trace>';
@@ -93,23 +71,16 @@ final class TaggingExceptionElementPresenter implements ExceptionElementPresente
         return sprintf($template, $class, $type, $method, $this->presentExceptionTraceArguments($args));
     }
 
-    /**
-     * @param string $function
-     * @param array $args
-     * @return string
-     */
-    public function presentExceptionTraceFunction($function, array $args)
+    
+    public function presentExceptionTraceFunction(string $function, array $args): string
     {
         $template = '   <trace><trace-func>%s</trace-func>(<trace-args>%s</trace-args>)</trace>';
 
         return sprintf($template, $function, $this->presentExceptionTraceArguments($args));
     }
 
-    /**
-     * @param array $args
-     * @return array
-     */
-    private function presentExceptionTraceArguments(array $args)
+    
+    private function presentExceptionTraceArguments(array $args): string
     {
         $valuePresenter = $this->valuePresenter;
 

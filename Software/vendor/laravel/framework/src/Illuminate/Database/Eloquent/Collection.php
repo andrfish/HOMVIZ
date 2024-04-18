@@ -2,17 +2,22 @@
 
 namespace Illuminate\Database\Eloquent;
 
+use Illuminate\Contracts\Queue\QueueableCollection;
+use Illuminate\Contracts\Queue\QueueableEntity;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection as BaseCollection;
+use Illuminate\Support\Str;
+use LogicException;
 
-class Collection extends BaseCollection
+class Collection extends BaseCollection implements QueueableCollection
 {
     /**
      * Find a model in the collection by key.
      *
      * @param  mixed  $key
      * @param  mixed  $default
-     * @return \Illuminate\Database\Eloquent\Model
+     * @return \Illuminate\Database\Eloquent\Model|static|null
      */
     public function find($key, $default = null)
     {
@@ -20,7 +25,19 @@ class Collection extends BaseCollection
             $key = $key->getKey();
         }
 
-        return Arr::first($this->items, function ($itemKey, $model) use ($key) {
+        if ($key instanceof Arrayable) {
+            $key = $key->toArray();
+        }
+
+        if (is_array($key)) {
+            if ($this->isEmpty()) {
+                return new static;
+            }
+
+            return $this->whereIn($this->first()->getKeyName(), $key);
+        }
+
+        return Arr::first($this->items, function ($model) use ($key) {
             return $model->getKey() == $key;
         }, $default);
     }
@@ -28,17 +45,17 @@ class Collection extends BaseCollection
     /**
      * Load a set of relationships onto the collection.
      *
-     * @param  mixed  $relations
+     * @param  array|string  $relations
      * @return $this
      */
     public function load($relations)
     {
-        if (count($this->items) > 0) {
+        if ($this->isNotEmpty()) {
             if (is_string($relations)) {
                 $relations = func_get_args();
             }
 
-            $query = $this->first()->newQuery()->with($relations);
+            $query = $this->first()->newQueryWithoutRelationships()->with($relations);
 
             $this->items = $query->eagerLoadRelations($this->items);
         }
@@ -47,14 +64,223 @@ class Collection extends BaseCollection
     }
 
     /**
-     * Add an item to the collection.
+     * Load a set of aggregations over relationship's column onto the collection.
      *
-     * @param  mixed  $item
+     * @param  array|string  $relations
+     * @param  string  $column
+     * @param  string  $function
      * @return $this
      */
-    public function add($item)
+    public function loadAggregate($relations, $column, $function = null)
     {
-        $this->items[] = $item;
+        if ($this->isEmpty()) {
+            return $this;
+        }
+
+        $models = $this->first()->newModelQuery()
+            ->whereKey($this->modelKeys())
+            ->select($this->first()->getKeyName())
+            ->withAggregate($relations, $column, $function)
+            ->get()
+            ->keyBy($this->first()->getKeyName());
+
+        $attributes = Arr::except(
+            array_keys($models->first()->getAttributes()),
+            $models->first()->getKeyName()
+        );
+
+        $this->each(function ($model) use ($models, $attributes) {
+            $extraAttributes = Arr::only($models->get($model->getKey())->getAttributes(), $attributes);
+
+            $model->forceFill($extraAttributes)
+                ->syncOriginalAttributes($attributes)
+                ->mergeCasts($models->get($model->getKey())->getCasts());
+        });
+
+        return $this;
+    }
+
+    /**
+     * Load a set of relationship counts onto the collection.
+     *
+     * @param  array|string  $relations
+     * @return $this
+     */
+    public function loadCount($relations)
+    {
+        return $this->loadAggregate($relations, '*', 'count');
+    }
+
+    /**
+     * Load a set of relationship's max column values onto the collection.
+     *
+     * @param  array|string  $relations
+     * @param  string  $column
+     * @return $this
+     */
+    public function loadMax($relations, $column)
+    {
+        return $this->loadAggregate($relations, $column, 'max');
+    }
+
+    /**
+     * Load a set of relationship's min column values onto the collection.
+     *
+     * @param  array|string  $relations
+     * @param  string  $column
+     * @return $this
+     */
+    public function loadMin($relations, $column)
+    {
+        return $this->loadAggregate($relations, $column, 'min');
+    }
+
+    /**
+     * Load a set of relationship's column summations onto the collection.
+     *
+     * @param  array|string  $relations
+     * @param  string  $column
+     * @return $this
+     */
+    public function loadSum($relations, $column)
+    {
+        return $this->loadAggregate($relations, $column, 'sum');
+    }
+
+    /**
+     * Load a set of relationship's average column values onto the collection.
+     *
+     * @param  array|string  $relations
+     * @param  string  $column
+     * @return $this
+     */
+    public function loadAvg($relations, $column)
+    {
+        return $this->loadAggregate($relations, $column, 'avg');
+    }
+
+    /**
+     * Load a set of related existences onto the collection.
+     *
+     * @param  array|string  $relations
+     * @return $this
+     */
+    public function loadExists($relations)
+    {
+        return $this->loadAggregate($relations, '*', 'exists');
+    }
+
+    /**
+     * Load a set of relationships onto the collection if they are not already eager loaded.
+     *
+     * @param  array|string  $relations
+     * @return $this
+     */
+    public function loadMissing($relations)
+    {
+        if (is_string($relations)) {
+            $relations = func_get_args();
+        }
+
+        foreach ($relations as $key => $value) {
+            if (is_numeric($key)) {
+                $key = $value;
+            }
+
+            $segments = explode('.', explode(':', $key)[0]);
+
+            if (Str::contains($key, ':')) {
+                $segments[count($segments) - 1] .= ':'.explode(':', $key)[1];
+            }
+
+            $path = [];
+
+            foreach ($segments as $segment) {
+                $path[] = [$segment => $segment];
+            }
+
+            if (is_callable($value)) {
+                $path[count($segments) - 1][end($segments)] = $value;
+            }
+
+            $this->loadMissingRelation($this, $path);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Load a relationship path if it is not already eager loaded.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection  $models
+     * @param  array  $path
+     * @return void
+     */
+    protected function loadMissingRelation(self $models, array $path)
+    {
+        $relation = array_shift($path);
+
+        $name = explode(':', key($relation))[0];
+
+        if (is_string(reset($relation))) {
+            $relation = reset($relation);
+        }
+
+        $models->filter(function ($model) use ($name) {
+            return ! is_null($model) && ! $model->relationLoaded($name);
+        })->load($relation);
+
+        if (empty($path)) {
+            return;
+        }
+
+        $models = $models->pluck($name)->whereNotNull();
+
+        if ($models->first() instanceof BaseCollection) {
+            $models = $models->collapse();
+        }
+
+        $this->loadMissingRelation(new static($models), $path);
+    }
+
+    /**
+     * Load a set of relationships onto the mixed relationship collection.
+     *
+     * @param  string  $relation
+     * @param  array  $relations
+     * @return $this
+     */
+    public function loadMorph($relation, $relations)
+    {
+        $this->pluck($relation)
+            ->filter()
+            ->groupBy(function ($model) {
+                return get_class($model);
+            })
+            ->each(function ($models, $className) use ($relations) {
+                static::make($models)->load($relations[$className] ?? []);
+            });
+
+        return $this;
+    }
+
+    /**
+     * Load a set of relationship counts onto the mixed relationship collection.
+     *
+     * @param  string  $relation
+     * @param  array  $relations
+     * @return $this
+     */
+    public function loadMorphCount($relation, $relations)
+    {
+        $this->pluck($relation)
+            ->filter()
+            ->groupBy(function ($model) {
+                return get_class($model);
+            })
+            ->each(function ($models, $className) use ($relations) {
+                static::make($models)->loadCount($relations[$className] ?? []);
+            });
 
         return $this;
     }
@@ -63,37 +289,25 @@ class Collection extends BaseCollection
      * Determine if a key exists in the collection.
      *
      * @param  mixed  $key
+     * @param  mixed  $operator
      * @param  mixed  $value
      * @return bool
      */
-    public function contains($key, $value = null)
+    public function contains($key, $operator = null, $value = null)
     {
-        if (func_num_args() == 2) {
-            return parent::contains($key, $value);
+        if (func_num_args() > 1 || $this->useAsCallable($key)) {
+            return parent::contains(...func_get_args());
         }
 
-        if ($this->useAsCallable($key)) {
-            return parent::contains($key);
+        if ($key instanceof Model) {
+            return parent::contains(function ($model) use ($key) {
+                return $model->is($key);
+            });
         }
 
-        $key = $key instanceof Model ? $key->getKey() : $key;
-
-        return parent::contains(function ($k, $m) use ($key) {
-            return $m->getKey() == $key;
+        return parent::contains(function ($model) use ($key) {
+            return $model->getKey() == $key;
         });
-    }
-
-    /**
-     * Fetch a nested element of the collection.
-     *
-     * @param  string  $key
-     * @return static
-     *
-     * @deprecated since version 5.1. Use pluck instead.
-     */
-    public function fetch($key)
-    {
-        return new static(Arr::fetch($this->toArray(), $key));
     }
 
     /**
@@ -103,8 +317,8 @@ class Collection extends BaseCollection
      */
     public function modelKeys()
     {
-        return array_map(function ($m) {
-            return $m->getKey();
+        return array_map(function ($model) {
+            return $model->getKey();
         }, $this->items);
     }
 
@@ -123,6 +337,66 @@ class Collection extends BaseCollection
         }
 
         return new static(array_values($dictionary));
+    }
+
+    /**
+     * Run a map over each of the items.
+     *
+     * @param  callable  $callback
+     * @return \Illuminate\Support\Collection|static
+     */
+    public function map(callable $callback)
+    {
+        $result = parent::map($callback);
+
+        return $result->contains(function ($item) {
+            return ! $item instanceof Model;
+        }) ? $result->toBase() : $result;
+    }
+
+    /**
+     * Run an associative map over each of the items.
+     *
+     * The callback should return an associative array with a single key / value pair.
+     *
+     * @param  callable  $callback
+     * @return \Illuminate\Support\Collection|static
+     */
+    public function mapWithKeys(callable $callback)
+    {
+        $result = parent::mapWithKeys($callback);
+
+        return $result->contains(function ($item) {
+            return ! $item instanceof Model;
+        }) ? $result->toBase() : $result;
+    }
+
+    /**
+     * Reload a fresh model instance from the database for all the entities.
+     *
+     * @param  array|string  $with
+     * @return static
+     */
+    public function fresh($with = [])
+    {
+        if ($this->isEmpty()) {
+            return new static;
+        }
+
+        $model = $this->first();
+
+        $freshModels = $model->newQueryWithoutScopes()
+            ->with(is_string($with) ? func_get_args() : $with)
+            ->whereIn($model->getKeyName(), $this->modelKeys())
+            ->get()
+            ->getDictionary();
+
+        return $this->filter(function ($model) use ($freshModels) {
+            return $model->exists && isset($freshModels[$model->getKey()]);
+        })
+        ->map(function ($model) use ($freshModels) {
+            return $freshModels[$model->getKey()];
+        });
     }
 
     /**
@@ -156,6 +430,10 @@ class Collection extends BaseCollection
     {
         $intersect = new static;
 
+        if (empty($items)) {
+            return $intersect;
+        }
+
         $dictionary = $this->getDictionary($items);
 
         foreach ($this->items as $item) {
@@ -171,12 +449,13 @@ class Collection extends BaseCollection
      * Return only unique items from the collection.
      *
      * @param  string|callable|null  $key
+     * @param  bool  $strict
      * @return static
      */
-    public function unique($key = null)
+    public function unique($key = null, $strict = false)
     {
         if (! is_null($key)) {
-            return parent::unique($key);
+            return parent::unique($key, $strict);
         }
 
         return new static(array_values($this->getDictionary()));
@@ -190,6 +469,10 @@ class Collection extends BaseCollection
      */
     public function only($keys)
     {
+        if (is_null($keys)) {
+            return new static($this->items);
+        }
+
         $dictionary = Arr::only($this->getDictionary(), $keys);
 
         return new static(array_values($dictionary));
@@ -209,24 +492,42 @@ class Collection extends BaseCollection
     }
 
     /**
+     * Make the given, typically visible, attributes hidden across the entire collection.
+     *
+     * @param  array|string  $attributes
+     * @return $this
+     */
+    public function makeHidden($attributes)
+    {
+        return $this->each->makeHidden($attributes);
+    }
+
+    /**
      * Make the given, typically hidden, attributes visible across the entire collection.
      *
      * @param  array|string  $attributes
      * @return $this
      */
-    public function withHidden($attributes)
+    public function makeVisible($attributes)
     {
-        $this->each(function ($model) use ($attributes) {
-            $model->withHidden($attributes);
-        });
+        return $this->each->makeVisible($attributes);
+    }
 
-        return $this;
+    /**
+     * Append an attribute across the entire collection.
+     *
+     * @param  array|string  $attributes
+     * @return $this
+     */
+    public function append($attributes)
+    {
+        return $this->each->append($attributes);
     }
 
     /**
      * Get a dictionary keyed by primary keys.
      *
-     * @param  \ArrayAccess|array  $items
+     * @param  \ArrayAccess|array|null  $items
      * @return array
      */
     public function getDictionary($items = null)
@@ -243,12 +544,207 @@ class Collection extends BaseCollection
     }
 
     /**
-     * Get a base Support collection instance from this collection.
+     * The following methods are intercepted to always return base collections.
+     */
+
+    /**
+     * Get an array with the values of a given key.
+     *
+     * @param  string|array  $value
+     * @param  string|null  $key
+     * @return \Illuminate\Support\Collection
+     */
+    public function pluck($value, $key = null)
+    {
+        return $this->toBase()->pluck($value, $key);
+    }
+
+    /**
+     * Get the keys of the collection items.
      *
      * @return \Illuminate\Support\Collection
      */
-    public function toBase()
+    public function keys()
     {
-        return new BaseCollection($this->items);
+        return $this->toBase()->keys();
+    }
+
+    /**
+     * Zip the collection together with one or more arrays.
+     *
+     * @param  mixed  ...$items
+     * @return \Illuminate\Support\Collection
+     */
+    public function zip($items)
+    {
+        return $this->toBase()->zip(...func_get_args());
+    }
+
+    /**
+     * Collapse the collection of items into a single array.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function collapse()
+    {
+        return $this->toBase()->collapse();
+    }
+
+    /**
+     * Get a flattened array of the items in the collection.
+     *
+     * @param  int  $depth
+     * @return \Illuminate\Support\Collection
+     */
+    public function flatten($depth = INF)
+    {
+        return $this->toBase()->flatten($depth);
+    }
+
+    /**
+     * Flip the items in the collection.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function flip()
+    {
+        return $this->toBase()->flip();
+    }
+
+    /**
+     * Pad collection to the specified length with a value.
+     *
+     * @param  int  $size
+     * @param  mixed  $value
+     * @return \Illuminate\Support\Collection
+     */
+    public function pad($size, $value)
+    {
+        return $this->toBase()->pad($size, $value);
+    }
+
+    /**
+     * Get the comparison function to detect duplicates.
+     *
+     * @param  bool  $strict
+     * @return \Closure
+     */
+    protected function duplicateComparator($strict)
+    {
+        return function ($a, $b) {
+            return $a->is($b);
+        };
+    }
+
+    /**
+     * Get the type of the entities being queued.
+     *
+     * @return string|null
+     *
+     * @throws \LogicException
+     */
+    public function getQueueableClass()
+    {
+        if ($this->isEmpty()) {
+            return;
+        }
+
+        $class = get_class($this->first());
+
+        $this->each(function ($model) use ($class) {
+            if (get_class($model) !== $class) {
+                throw new LogicException('Queueing collections with multiple model types is not supported.');
+            }
+        });
+
+        return $class;
+    }
+
+    /**
+     * Get the identifiers for all of the entities.
+     *
+     * @return array
+     */
+    public function getQueueableIds()
+    {
+        if ($this->isEmpty()) {
+            return [];
+        }
+
+        return $this->first() instanceof QueueableEntity
+                    ? $this->map->getQueueableId()->all()
+                    : $this->modelKeys();
+    }
+
+    /**
+     * Get the relationships of the entities being queued.
+     *
+     * @return array
+     */
+    public function getQueueableRelations()
+    {
+        if ($this->isEmpty()) {
+            return [];
+        }
+
+        $relations = $this->map->getQueueableRelations()->all();
+
+        if (count($relations) === 0 || $relations === [[]]) {
+            return [];
+        } elseif (count($relations) === 1) {
+            return reset($relations);
+        } else {
+            return array_intersect(...array_values($relations));
+        }
+    }
+
+    /**
+     * Get the connection of the entities being queued.
+     *
+     * @return string|null
+     *
+     * @throws \LogicException
+     */
+    public function getQueueableConnection()
+    {
+        if ($this->isEmpty()) {
+            return;
+        }
+
+        $connection = $this->first()->getConnectionName();
+
+        $this->each(function ($model) use ($connection) {
+            if ($model->getConnectionName() !== $connection) {
+                throw new LogicException('Queueing collections with multiple model connections is not supported.');
+            }
+        });
+
+        return $connection;
+    }
+
+    /**
+     * Get the Eloquent query builder from the collection.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     *
+     * @throws \LogicException
+     */
+    public function toQuery()
+    {
+        $model = $this->first();
+
+        if (! $model) {
+            throw new LogicException('Unable to create query for empty collection.');
+        }
+
+        $class = get_class($model);
+
+        if ($this->filter(function ($model) use ($class) {
+            return ! $model instanceof $class;
+        })->isNotEmpty()) {
+            throw new LogicException('Unable to create query for collection with mixed types.');
+        }
+
+        return $model->newModelQuery()->whereKey($this->modelKeys());
     }
 }

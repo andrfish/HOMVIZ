@@ -2,8 +2,10 @@
 
 namespace Illuminate\Encryption;
 
-use RuntimeException;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Laravel\SerializableClosure\SerializableClosure;
+use Opis\Closure\SerializableClosure as OpisSerializableClosure;
 
 class EncryptionServiceProvider extends ServiceProvider
 {
@@ -14,19 +16,89 @@ class EncryptionServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->registerEncrypter();
+        $this->registerOpisSecurityKey();
+        $this->registerSerializableClosureSecurityKey();
+    }
+
+    /**
+     * Register the encrypter.
+     *
+     * @return void
+     */
+    protected function registerEncrypter()
+    {
         $this->app->singleton('encrypter', function ($app) {
             $config = $app->make('config')->get('app');
 
-            $key = $config['key'];
+            return new Encrypter($this->parseKey($config), $config['cipher']);
+        });
+    }
 
-            $cipher = $config['cipher'];
+    /**
+     * Configure Opis Closure signing for security.
+     *
+     * @return void
+     *
+     * @deprecated Will be removed in a future Laravel version.
+     */
+    protected function registerOpisSecurityKey()
+    {
+        if (\PHP_VERSION_ID < 80100) {
+            $config = $this->app->make('config')->get('app');
 
-            if (Encrypter::supported($key, $cipher)) {
-                return new Encrypter($key, $cipher);
-            } elseif (McryptEncrypter::supported($key, $cipher)) {
-                return new McryptEncrypter($key, $cipher);
-            } else {
-                throw new RuntimeException('No supported encrypter found. The cipher and / or key length are invalid.');
+            if (! class_exists(OpisSerializableClosure::class) || empty($config['key'])) {
+                return;
+            }
+
+            OpisSerializableClosure::setSecretKey($this->parseKey($config));
+        }
+    }
+
+    /**
+     * Configure Serializable Closure signing for security.
+     *
+     * @return void
+     */
+    protected function registerSerializableClosureSecurityKey()
+    {
+        $config = $this->app->make('config')->get('app');
+
+        if (! class_exists(SerializableClosure::class) || empty($config['key'])) {
+            return;
+        }
+
+        SerializableClosure::setSecretKey($this->parseKey($config));
+    }
+
+    /**
+     * Parse the encryption key.
+     *
+     * @param  array  $config
+     * @return string
+     */
+    protected function parseKey(array $config)
+    {
+        if (Str::startsWith($key = $this->key($config), $prefix = 'base64:')) {
+            $key = base64_decode(Str::after($key, $prefix));
+        }
+
+        return $key;
+    }
+
+    /**
+     * Extract the encryption key from the given configuration.
+     *
+     * @param  array  $config
+     * @return string
+     *
+     * @throws \Illuminate\Encryption\MissingAppKeyException
+     */
+    protected function key(array $config)
+    {
+        return tap($config['key'], function ($key) {
+            if (empty($key)) {
+                throw new MissingAppKeyException;
             }
         });
     }

@@ -17,22 +17,16 @@ use PhpSpec\Exception\Exception;
 
 abstract class AbstractPhpSpecExceptionPresenter
 {
-    /**
-     * @param Exception $exception
-     * @return string
-     */
-    public function presentException(Exception $exception)
+    
+    public function presentException(Exception $exception): string
     {
         list($file, $line) = $this->getExceptionExamplePosition($exception);
 
         return $this->presentFileCode($file, $line);
     }
 
-    /**
-     * @param Exception $exception
-     * @return array
-     */
-    private function getExceptionExamplePosition(Exception $exception)
+    
+    private function getExceptionExamplePosition(Exception $exception): array
     {
         $cause = $exception->getCause();
 
@@ -41,7 +35,7 @@ abstract class AbstractPhpSpecExceptionPresenter
                 continue;
             }
 
-            if (!empty($cause) && $cause->getFilename() === $call['file']) {
+            if ($cause->getFileName() === $call['file']) {
                 return array($call['file'], $call['line']);
             }
         }
@@ -49,12 +43,6 @@ abstract class AbstractPhpSpecExceptionPresenter
         return array($exception->getFile(), $exception->getLine());
     }
 
-    /**
-     * @param string  $file
-     * @param integer $lineno
-     * @param integer $context
-     *
-     * @return string
-     */
-    abstract protected function presentFileCode($file, $lineno, $context = 6);
+    
+    abstract protected function presentFileCode(string $file, int $lineno, int $context = 6): string;
 }

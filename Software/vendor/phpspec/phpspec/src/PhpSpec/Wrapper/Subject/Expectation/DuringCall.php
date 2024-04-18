@@ -14,19 +14,17 @@
 namespace PhpSpec\Wrapper\Subject\Expectation;
 
 use PhpSpec\Exception\Example\MatcherException;
-use PhpSpec\Matcher\MatcherInterface;
+use PhpSpec\Matcher\Matcher;
 use PhpSpec\Util\Instantiator;
 use PhpSpec\Wrapper\Subject\WrappedObject;
 
 abstract class DuringCall
 {
     /**
-     * @var MatcherInterface
+     * @var Matcher
      */
     private $matcher;
-    /**
-     * @var mixed
-     */
+
     private $subject;
     /**
      * @var array
@@ -37,24 +35,18 @@ abstract class DuringCall
      */
     private $wrappedObject;
 
-    /**
-     * @param MatcherInterface $matcher
-     */
-    public function __construct(MatcherInterface $matcher)
+
+    public function __construct(Matcher $matcher)
     {
         $this->matcher = $matcher;
     }
 
     /**
-     * @param string $alias
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @param WrappedObject|null $wrappedObject
+     * @param null|WrappedObject $wrappedObject
      *
      * @return $this
      */
-    public function match($alias, $subject, array $arguments = array(), $wrappedObject = null)
+    public function match(string $alias, $subject, array $arguments = array(), $wrappedObject = null)
     {
         $this->subject = $subject;
         $this->arguments = $arguments;
@@ -63,16 +55,11 @@ abstract class DuringCall
         return $this;
     }
 
-    /**
-     * @param string $method
-     * @param array  $arguments
-     *
-     * @return mixed
-     */
-    public function during($method, array $arguments = array())
+
+    public function during(string $method, array $arguments = array())
     {
         if ($method === '__construct') {
-            $this->subject->beAnInstanceOf($this->wrappedObject->getClassname(), $arguments);
+            $this->subject->beAnInstanceOf($this->wrappedObject->getClassName(), $arguments);
 
             return $this->duringInstantiation();
         }
@@ -82,37 +69,30 @@ abstract class DuringCall
         return $this->runDuring($object, $method, $arguments);
     }
 
-    /**
-     * @return mixed
-     */
+
     public function duringInstantiation()
     {
         if ($factoryMethod = $this->wrappedObject->getFactoryMethod()) {
-            $method = is_array($factoryMethod) ? $factoryMethod[1] : $factoryMethod;
+            $method = \is_array($factoryMethod) ? $factoryMethod[1] : $factoryMethod;
         } else {
             $method = '__construct';
         }
         $instantiator = new Instantiator();
-        $object = $instantiator->instantiate($this->wrappedObject->getClassname());
+        $object = $instantiator->instantiate($this->wrappedObject->getClassName());
 
         return $this->runDuring($object, $method, $this->wrappedObject->getArguments());
     }
 
     /**
-     * @param string $method
-     * @param array  $arguments
-     *
-     * @return mixed
-     *
      * @throws MatcherException
      */
-    public function __call($method, array $arguments = array())
+    public function __call(string $method, array $arguments = array())
     {
         if (preg_match('/^during(.+)$/', $method, $matches)) {
             return $this->during(lcfirst($matches[1]), $arguments);
         }
 
-        throw new MatcherException('Incorrect usage of matcher Throw, '.
+        throw new MatcherException('Incorrect usage of matcher, '.
             'either prefix the method with "during" and capitalize the '.
             'first character of the method or use ->during(\'callable\', '.
             'array(arguments)).'.PHP_EOL.'E.g.'.PHP_EOL.'->during'.
@@ -120,18 +100,14 @@ abstract class DuringCall
             '->during(\''.$method.'\', array(arguments))');
     }
 
-    /**
-     * @return array
-     */
-    protected function getArguments()
+
+    protected function getArguments(): array
     {
         return $this->arguments;
     }
 
-    /**
-     * @return MatcherInterface
-     */
-    protected function getMatcher()
+
+    protected function getMatcher(): Matcher
     {
         return $this->matcher;
     }
@@ -139,9 +115,6 @@ abstract class DuringCall
     /**
      * @param object $object
      * @param string $method
-     * @param array  $arguments
-     *
-     * @return mixed
      */
     abstract protected function runDuring($object, $method, array $arguments = array());
 }

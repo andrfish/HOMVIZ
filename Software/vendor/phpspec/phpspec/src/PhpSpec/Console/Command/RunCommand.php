@@ -13,9 +13,10 @@
 
 namespace PhpSpec\Console\Command;
 
+use PhpSpec\Console\Application;
 use PhpSpec\Formatter\FatalPresenter;
 use PhpSpec\Process\Shutdown\UpdateConsoleAction;
-use PhpSpec\ServiceContainer;
+use PhpSpec\ServiceContainer\IndexedServiceContainer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -25,9 +26,28 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Main command, responsible for running the specs
+ *
+ * @internal
  */
-class RunCommand extends Command
+final class RunCommand extends Command
 {
+    /**
+     * @psalm-suppress MethodSignatureMismatch
+     */
+    public function getApplication(): Application
+    {
+        $application = parent::getApplication();
+
+        if (!$application instanceof Application) {
+            throw new \RuntimeException('PhpSpec commands require PhpSpec application');
+        }
+
+        return $application;
+    }
+
+    /**
+     * @return void
+     */
     protected function configure()
     {
         $this
@@ -87,6 +107,10 @@ Will run all the specifications in the spec directory.
 
 Will run only the ClassNameSpec.
 
+  <info>php %command.full_name% spec/ClassNameSpec.php:56</info>
+
+Will run only specification defined in the ClassNameSpec on line 56.
+
 You can choose the bootstrap file with the bootstrap option e.g.:
 
   <info>php %command.full_name% --bootstrap=bootstrap.php</info>
@@ -124,13 +148,7 @@ EOF
         ;
     }
 
-    /**
-     * @param InputInterface  $input
-     * @param OutputInterface $output
-     *
-     * @return mixed
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $container = $this->getApplication()->getContainer();
 
@@ -144,9 +162,11 @@ EOF
 
         if ($currentFormatter instanceof FatalPresenter) {
 
-            $container->setShared('process.shutdown.update_console_action', function(ServiceContainer $c) use ($currentFormatter) {
+            $container->define('process.shutdown.update_console_action', function (IndexedServiceContainer $c) use ($currentFormatter) {
+                $currentExample = $c->get('current_example');
+                /** @var \PhpSpec\Message\CurrentExampleTracker $currentExample */
                 return new UpdateConsoleAction(
-                    $c->get('current_example'),
+                    $currentExample,
                     $currentFormatter
                 );
             });
@@ -159,13 +179,13 @@ EOF
 
         $container->configure();
 
-        $locator = $input->getArgument('spec');
+        $locator = $input->getArgument('spec') ?? '';
         $linenum = null;
         if (preg_match('/^(.*)\:(\d+)$/', $locator, $matches)) {
             list($_, $locator, $linenum) = $matches;
         }
 
-        $suite       = $container->get('loader.resource_loader')->load($locator, $linenum);
+        $suite       = $container->get('loader.resource_loader')->load((string)$locator, $linenum);
         $suiteRunner = $container->get('runner.suite');
 
         return $container->get('console.result_converter')->convert(

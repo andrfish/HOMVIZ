@@ -13,10 +13,14 @@
 
 namespace PhpSpec\Runner;
 
+use Error;
+use PhpSpec\Exception\ErrorException;
+use PhpSpec\Runner\Maintainer\Maintainer;
+use PhpSpec\Util\DispatchTrait;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use PhpSpec\Runner\Maintainer\LetAndLetgoMaintainer;
-use PhpSpec\Formatter\Presenter\PresenterInterface;
-use PhpSpec\SpecificationInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
+use PhpSpec\Specification;
 use PhpSpec\Event\ExampleEvent;
 use PhpSpec\Loader\Node\ExampleNode;
 use PhpSpec\Exception\Exception as PhpSpecException;
@@ -26,33 +30,30 @@ use Exception;
 
 class ExampleRunner
 {
+    use DispatchTrait;
+
     /**
      * @var EventDispatcherInterface
      */
     private $dispatcher;
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
     /**
-     * @var Maintainer\MaintainerInterface[]
+     * @var Maintainer[]
      */
     private $maintainers = array();
 
-    /**
-     * @param EventDispatcherInterface $dispatcher
-     * @param PresenterInterface       $presenter
-     */
-    public function __construct(EventDispatcherInterface $dispatcher, PresenterInterface $presenter)
+    
+    public function __construct(EventDispatcherInterface $dispatcher, Presenter $presenter)
     {
         $this->dispatcher = $dispatcher;
         $this->presenter  = $presenter;
     }
 
-    /**
-     * @param Maintainer\MaintainerInterface $maintainer
-     */
-    public function registerMaintainer(Maintainer\MaintainerInterface $maintainer)
+    
+    public function registerMaintainer(Maintainer $maintainer): void
     {
         $this->maintainers[] = $maintainer;
 
@@ -61,17 +62,14 @@ class ExampleRunner
         });
     }
 
-    /**
-     * @param ExampleNode $example
-     *
-     * @return int
-     */
-    public function run(ExampleNode $example)
+    
+    public function run(ExampleNode $example): int
     {
         $startTime = microtime(true);
-        $this->dispatcher->dispatch(
-            'beforeExample',
-            new ExampleEvent($example)
+        $this->dispatch(
+            $this->dispatcher,
+            new ExampleEvent($example),
+            'beforeExample'
         );
 
         try {
@@ -97,6 +95,9 @@ class ExampleRunner
         } catch (Exception $e) {
             $status    = ExampleEvent::BROKEN;
             $exception = $e;
+        } catch (Error $e) {
+            $status    = ExampleEvent::BROKEN;
+            $exception = new ErrorException($e);
         }
 
         if ($exception instanceof PhpSpecException) {
@@ -104,22 +105,20 @@ class ExampleRunner
         }
 
         $runTime = microtime(true) - $startTime;
-        $this->dispatcher->dispatch(
-            'afterExample',
-            $event = new ExampleEvent($example, $runTime, $status, $exception)
+        $this->dispatch(
+            $this->dispatcher,
+            $event = new ExampleEvent($example, $runTime, $status, $exception),
+            'afterExample'
         );
 
         return $event->getResult();
     }
 
     /**
-     * @param SpecificationInterface $context
-     * @param ExampleNode            $example
-     *
      * @throws \PhpSpec\Exception\Example\PendingException
      * @throws \Exception
      */
-    protected function executeExample(SpecificationInterface $context, ExampleNode $example)
+    protected function executeExample(Specification $context, ExampleNode $example): void
     {
         if ($example->isPending()) {
             throw new ExampleException\PendingException();
@@ -127,7 +126,7 @@ class ExampleRunner
 
         $matchers      = new MatcherManager($this->presenter);
         $collaborators = new CollaboratorManager($this->presenter);
-        $maintainers   = array_filter($this->maintainers, function ($maintainer) use ($example) {
+        $maintainers   = array_filter($this->maintainers, function (Maintainer $maintainer) use ($example) {
             return $maintainer->supports($example);
         });
 
@@ -140,7 +139,15 @@ class ExampleRunner
         $reflection = $example->getFunctionReflection();
 
         try {
-            $reflection->invokeArgs($context, $collaborators->getArgumentsFor($reflection));
+            if ($reflection instanceof \ReflectionMethod) {
+                $reflection->invokeArgs($context, $collaborators->getArgumentsFor($reflection));
+            }
+            elseif ($reflection instanceof \ReflectionFunction)  {
+                $reflection->invokeArgs($collaborators->getArgumentsFor($reflection));
+            }
+            else {
+                throw new \RuntimeException('Not able to invoke example');
+            }
         } catch (\Exception $e) {
             $this->runMaintainersTeardown(
                 $this->searchExceptionMaintainers($maintainers),
@@ -156,28 +163,24 @@ class ExampleRunner
     }
 
     /**
-     * @param Maintainer\MaintainerInterface[] $maintainers
-     * @param ExampleNode                      $example
-     * @param SpecificationInterface           $context
-     * @param MatcherManager                   $matchers
-     * @param CollaboratorManager              $collaborators
+     * @param Maintainer[] $maintainers
      */
     private function runMaintainersTeardown(
         array $maintainers,
         ExampleNode $example,
-        SpecificationInterface $context,
+        Specification $context,
         MatcherManager $matchers,
         CollaboratorManager $collaborators
-    ) {
+    ): void {
         foreach (array_reverse($maintainers) as $maintainer) {
             $maintainer->teardown($example, $context, $matchers, $collaborators);
         }
     }
 
     /**
-     * @param Maintainer\MaintainerInterface[] $maintainers
+     * @param Maintainer[] $maintainers
      *
-     * @return Maintainer\MaintainerInterface[]
+     * @return Maintainer[]
      */
     private function searchExceptionMaintainers(array $maintainers)
     {

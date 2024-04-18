@@ -63,7 +63,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
       DaTALab
     </div>
     <!-- Default to the left -->
-    <strong>Copyright &copy; 2018-2021 <a href="https://www.datalab.science/">datalab.science</a>.</strong> All rights reserved.
+    <strong>Copyright &copy; 2018-<script>document.write(/\d{4}/.exec(Date())[0])</script> <a href="https://www.datalab.science/">datalab.science</a>.</strong> All rights reserved.
   </footer>
 
 

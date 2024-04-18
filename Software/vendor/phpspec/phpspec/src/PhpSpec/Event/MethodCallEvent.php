@@ -14,21 +14,20 @@
 namespace PhpSpec\Event;
 
 use PhpSpec\Loader\Node\ExampleNode;
-use Symfony\Component\EventDispatcher\Event;
+use PhpSpec\Loader\Node\SpecificationNode;
+use PhpSpec\Loader\Suite;
 
 /**
  * Class MethodCallEvent holds information about method call events
  */
-class MethodCallEvent extends Event implements EventInterface
+class MethodCallEvent extends BaseEvent implements PhpSpecEvent
 {
     /**
      * @var ExampleNode
      */
     private $example;
 
-    /**
-     * @var mixed
-     */
+    
     private $subject;
 
     /**
@@ -41,17 +40,12 @@ class MethodCallEvent extends Event implements EventInterface
      */
     private $arguments;
 
-    /**
-     * @var mixed
-     */
+    
     private $returnValue;
 
     /**
-     * @param ExampleNode $example
-     * @param mixed       $subject
      * @param string      $method
      * @param array       $arguments
-     * @param mixed       $returnValue
      */
     public function __construct(ExampleNode $example, $subject, $method, $arguments, $returnValue = null)
     {
@@ -62,57 +56,43 @@ class MethodCallEvent extends Event implements EventInterface
         $this->returnValue = $returnValue;
     }
 
-    /**
-     * @return ExampleNode
-     */
-    public function getExample()
+    
+    public function getExample(): ExampleNode
     {
         return $this->example;
     }
 
-    /**
-     * @return \PhpSpec\Loader\Node\SpecificationNode
-     */
-    public function getSpecification()
+    
+    public function getSpecification(): SpecificationNode
     {
         return $this->example->getSpecification();
     }
 
-    /**
-     * @return \PhpSpec\Loader\Suite
-     */
-    public function getSuite()
+    
+    public function getSuite(): Suite
     {
         return $this->example->getSpecification()->getSuite();
     }
 
-    /**
-     * @return mixed
-     */
+    
     public function getSubject()
     {
         return $this->subject;
     }
 
-    /**
-     * @return string
-     */
-    public function getMethod()
+    
+    public function getMethod(): string
     {
         return $this->method;
     }
 
-    /**
-     * @return array
-     */
-    public function getArguments()
+    
+    public function getArguments(): array
     {
         return $this->arguments;
     }
 
-    /**
-     * @return mixed
-     */
+    
     public function getReturnValue()
     {
         return $this->returnValue;

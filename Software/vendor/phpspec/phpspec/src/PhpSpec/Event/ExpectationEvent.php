@@ -13,14 +13,15 @@
 
 namespace PhpSpec\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use PhpSpec\Loader\Node\SpecificationNode;
+use PhpSpec\Loader\Suite;
 use PhpSpec\Loader\Node\ExampleNode;
-use PhpSpec\Matcher\MatcherInterface;
+use PhpSpec\Matcher\Matcher;
 
 /**
  * Class ExpectationEvent holds information about the expectation event
  */
-class ExpectationEvent extends Event implements EventInterface
+final class ExpectationEvent extends BaseEvent implements PhpSpecEvent
 {
     /**
      * Expectation passed
@@ -43,13 +44,11 @@ class ExpectationEvent extends Event implements EventInterface
     private $example;
 
     /**
-     * @var MatcherInterface
+     * @var Matcher
      */
     private $matcher;
 
-    /**
-     * @var mixed
-     */
+    
     private $subject;
 
     /**
@@ -63,7 +62,7 @@ class ExpectationEvent extends Event implements EventInterface
     private $arguments;
 
     /**
-     * @var integer
+     * @var int
      */
     private $result;
 
@@ -73,21 +72,18 @@ class ExpectationEvent extends Event implements EventInterface
     private $exception;
 
     /**
-     * @param ExampleNode      $example
-     * @param MatcherInterface $matcher
-     * @param mixed            $subject
      * @param string           $method
      * @param array            $arguments
-     * @param integer          $result
+     * @param int          $result
      * @param \Exception       $exception
      */
     public function __construct(
         ExampleNode $example,
-        MatcherInterface $matcher,
+        Matcher $matcher,
         $subject,
         $method,
         $arguments,
-        $result = null,
+        $result = self::PASSED,
         $exception = null
     ) {
         $this->example = $example;
@@ -99,74 +95,58 @@ class ExpectationEvent extends Event implements EventInterface
         $this->exception = $exception;
     }
 
-    /**
-     * @return MatcherInterface
-     */
-    public function getMatcher()
+    
+    public function getMatcher(): Matcher
     {
         return $this->matcher;
     }
 
-    /**
-     * @return ExampleNode
-     */
-    public function getExample()
+    
+    public function getExample(): ExampleNode
     {
         return $this->example;
     }
 
-    /**
-     * @return \PhpSpec\Loader\Node\SpecificationNode
-     */
-    public function getSpecification()
+    
+    public function getSpecification(): SpecificationNode
     {
         return $this->example->getSpecification();
     }
 
-    /**
-     * @return \PhpSpec\Loader\Suite
-     */
-    public function getSuite()
+    
+    public function getSuite(): Suite
     {
         return $this->example->getSpecification()->getSuite();
     }
 
-    /**
-     * @return mixed
-     */
+    
     public function getSubject()
     {
         return $this->subject;
     }
 
-    /**
-     * @return string
-     */
-    public function getMethod()
+    
+    public function getMethod(): string
     {
         return $this->method;
     }
 
-    /**
-     * @return array
-     */
-    public function getArguments()
+    
+    public function getArguments(): array
     {
         return $this->arguments;
     }
 
     /**
-     * @return \Exception
+     * @return null|\Exception
      */
     public function getException()
     {
         return $this->exception;
     }
 
-    /**
-     * @return integer
-     */
-    public function getResult()
+    
+    public function getResult(): int
     {
         return $this->result;
     }

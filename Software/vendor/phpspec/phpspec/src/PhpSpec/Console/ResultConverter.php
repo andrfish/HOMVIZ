@@ -22,12 +22,8 @@ class ResultConverter
 {
     /**
      * Convert Example result into exit code
-     *
-     * @param mixed $result
-     *
-     * @return 0|1
      */
-    public function convert($result)
+    public function convert($result): int
     {
         switch ($result) {
             case ExampleEvent::PASSED:

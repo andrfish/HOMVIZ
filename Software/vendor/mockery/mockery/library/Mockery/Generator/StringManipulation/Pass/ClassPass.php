@@ -1,8 +1,21 @@
 <?php
 
+/**
+ * Mockery (https://docs.mockery.io/)
+ *
+ * @copyright https://github.com/mockery/mockery/blob/HEAD/COPYRIGHT.md
+ * @license https://github.com/mockery/mockery/blob/HEAD/LICENSE BSD 3-Clause License
+ * @link https://github.com/mockery/mockery for the canonical source repository
+ */
+
 namespace Mockery\Generator\StringManipulation\Pass;
 
+use Mockery;
 use Mockery\Generator\MockConfiguration;
+
+use function class_exists;
+use function ltrim;
+use function str_replace;
 
 class ClassPass implements Pass
 {
@@ -10,7 +23,7 @@ class ClassPass implements Pass
     {
         $target = $config->getTargetClass();
 
-        if (!$target) {
+        if (! $target) {
             return $code;
         }
 
@@ -18,33 +31,16 @@ class ClassPass implements Pass
             return $code;
         }
 
-        $className = ltrim($target->getName(), "\\");
-        if (!class_exists($className)) {
-            $targetCode = '<?php ';
+        $className = ltrim($target->getName(), '\\');
 
-            if ($target->inNamespace()) {
-                $targetCode.= 'namespace ' . $target->getNamespaceName(). '; ';
-            }
-
-            $targetCode.= 'class ' . $target->getShortName() . ' {} ';
-
-            /*
-             * We could eval here, but it doesn't play well with the way
-             * PHPUnit tries to backup global state and the require definition
-             * loader
-             */
-            $tmpfname = tempnam(sys_get_temp_dir(), "Mockery");
-            file_put_contents($tmpfname, $targetCode);
-            require $tmpfname;
-            \Mockery::registerFileForCleanUp($tmpfname);
+        if (! class_exists($className)) {
+            Mockery::declareClass($className);
         }
 
-        $code = str_replace(
-            "implements MockInterface",
-            "extends \\" . $className . " implements MockInterface",
+        return str_replace(
+            'implements MockInterface',
+            'extends \\' . $className . ' implements MockInterface',
             $code
         );
-
-        return $code;
     }
 }

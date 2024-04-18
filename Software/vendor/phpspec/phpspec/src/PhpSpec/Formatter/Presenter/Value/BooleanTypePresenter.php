@@ -15,28 +15,20 @@ namespace PhpSpec\Formatter\Presenter\Value;
 
 final class BooleanTypePresenter implements TypePresenter
 {
-    /**
-     * @param mixed $value
-     * @return bool
-     */
-    public function supports($value)
+    
+    public function supports($value): bool
     {
-        return 'boolean' === strtolower(gettype($value));
+        return 'boolean' === strtolower(\gettype($value));
     }
 
-    /**
-     * @param mixed $value
-     * @return string
-     */
-    public function present($value)
+    
+    public function present($value): string
     {
         return $value ? 'true' : 'false';
     }
 
-    /**
-     * @return int
-     */
-    public function getPriority()
+    
+    public function getPriority(): int
     {
         return 40;
     }

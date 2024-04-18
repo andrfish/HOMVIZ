@@ -13,13 +13,13 @@
 
 namespace PhpSpec\Event;
 
-use Symfony\Component\EventDispatcher\Event;
+use PhpSpec\Loader\Suite;
 use PhpSpec\Loader\Node\SpecificationNode;
 
 /**
  * Class SpecificationEvent holds information about the specification event
  */
-class SpecificationEvent extends Event implements EventInterface
+class SpecificationEvent extends BaseEvent implements PhpSpecEvent
 {
     /**
      * @var SpecificationNode
@@ -32,58 +32,44 @@ class SpecificationEvent extends Event implements EventInterface
     private $time;
 
     /**
-     * @var integer
+     * @var int
      */
     private $result;
 
-    /**
-     * @param SpecificationNode $specification
-     * @param float             $time
-     * @param integer           $result
-     */
-    public function __construct(SpecificationNode $specification, $time = null, $result = null)
+    
+    public function __construct(SpecificationNode $specification, float $time = 0.0, int $result = 0)
     {
         $this->specification = $specification;
         $this->time          = $time;
         $this->result        = $result;
     }
 
-    /**
-     * @return SpecificationNode
-     */
-    public function getSpecification()
+    
+    public function getSpecification(): SpecificationNode
     {
         return $this->specification;
     }
 
-    /**
-     * @return string
-     */
-    public function getTitle()
+    
+    public function getTitle(): string
     {
         return $this->specification->getTitle();
     }
 
-    /**
-     * @return \PhpSpec\Loader\Suite
-     */
-    public function getSuite()
+    
+    public function getSuite(): Suite
     {
         return $this->specification->getSuite();
     }
 
-    /**
-     * @return float
-     */
-    public function getTime()
+    
+    public function getTime(): float
     {
         return $this->time;
     }
 
-    /**
-     * @return integer
-     */
-    public function getResult()
+    
+    public function getResult(): int
     {
         return $this->result;
     }

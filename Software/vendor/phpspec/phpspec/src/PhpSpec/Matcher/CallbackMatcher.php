@@ -13,10 +13,10 @@
 
 namespace PhpSpec\Matcher;
 
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
 use PhpSpec\Exception\Example\FailureException;
 
-class CallbackMatcher extends BasicMatcher
+final class CallbackMatcher extends BasicMatcher
 {
     /**
      * @var string
@@ -27,55 +27,34 @@ class CallbackMatcher extends BasicMatcher
      */
     private $callback;
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
 
-    /**
-     * @param string             $name
-     * @param callable           $callback
-     * @param PresenterInterface $presenter
-     */
-    public function __construct($name, $callback, PresenterInterface $presenter)
+    
+    public function __construct(string $name, callable $callback, Presenter $presenter)
     {
         $this->name      = $name;
         $this->callback  = $callback;
         $this->presenter = $presenter;
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return bool
-     */
-    public function supports($name, $subject, array $arguments)
+    
+    public function supports(string $name, $subject, array $arguments): bool
     {
         return $name === $this->name;
     }
 
-    /**
-     * @param string $subject
-     * @param array  $arguments
-     *
-     * @return bool
-     */
-    protected function matches($subject, array $arguments)
+    
+    protected function matches($subject, array $arguments): bool
     {
         array_unshift($arguments, $subject);
 
-        return (Boolean) call_user_func_array($this->callback, $arguments);
+        return (Boolean) \call_user_func_array($this->callback, $arguments);
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return FailureException
-     */
-    protected function getFailureException($name, $subject, array $arguments)
+    
+    protected function getFailureException(string $name, $subject, array $arguments): FailureException
     {
         return new FailureException(sprintf(
             '%s expected to %s(%s), but it is not.',
@@ -85,14 +64,8 @@ class CallbackMatcher extends BasicMatcher
         ));
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return FailureException
-     */
-    protected function getNegativeFailureException($name, $subject, array $arguments)
+    
+    protected function getNegativeFailureException(string $name, $subject, array $arguments): FailureException
     {
         return new FailureException(sprintf(
             '%s not expected to %s(%s), but it did.',

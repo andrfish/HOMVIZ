@@ -42,22 +42,23 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
      */
     private $namespaceResolver;
 
-    /**
-     * @param TypeHintIndex $typeHintIndex
-     * @param NamespaceResolver $namespaceResolver
-     */
+    
     public function __construct(TypeHintIndex $typeHintIndex, NamespaceResolver $namespaceResolver)
     {
         $this->typeHintIndex = $typeHintIndex;
         $this->namespaceResolver = $namespaceResolver;
+
+        if (\PHP_VERSION_ID >= 80000) {
+            $this->typehintTokens[] = T_NAME_FULLY_QUALIFIED;
+            $this->typehintTokens[] = T_NAME_QUALIFIED;
+        }
+
+        if (\PHP_VERSION_ID >= 80100) {
+            $this->typehintTokens[] = T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG;
+        }
     }
 
-    /**
-     * @param string $classDefinition
-     *
-     * @return string
-     */
-    public function rewrite($classDefinition)
+    public function rewrite(string $classDefinition): string
     {
         $this->namespaceResolver->analyse($classDefinition);
 
@@ -68,18 +69,14 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
         return $tokensToString;
     }
 
-    private function reset()
+    private function reset(): void
     {
         $this->state = self::STATE_DEFAULT;
         $this->currentClass = '';
         $this->currentFunction = '';
     }
 
-    /**
-     * @param array $tokens
-     * @return array $tokens
-     */
-    private function stripTypeHints($tokens)
+    private function stripTypeHints(array $tokens): array
     {
         foreach ($tokens as $index => $token) {
             if ($this->isToken($token, '{')) {
@@ -139,27 +136,19 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
         return $tokens;
     }
 
-    /**
-     * @param array $tokens
-     * @return string
-     */
-    private function tokensToString($tokens)
+    
+    private function tokensToString(array $tokens): string
     {
         return join('', array_map(function ($token) {
-            return is_array($token) ? $token[1] : $token;
+            return \is_array($token) ? $token[1] : $token;
         }, $tokens));
     }
 
-    /**
-     * @param array $tokens
-     * @param integer $index
-     * @param array $token
-     */
-    private function extractTypehints(&$tokens, $index, $token)
+    private function extractTypehints(array &$tokens, int $index, array $token): void
     {
         $typehint = '';
-        for ($i = $index - 1; in_array($tokens[$i][0], $this->typehintTokens); $i--) {
-            $typehint = $tokens[$i][1] . $typehint;
+        for ($i = $index - 1; !$this->haveNotReachedEndOfTypeHint($tokens[$i]); $i--) {
+            $typehint = (is_array($tokens[$i]) ? $tokens[$i][1] : $tokens[$i]) . $typehint;
 
             if (T_WHITESPACE !== $tokens[$i][0]) {
                 unset($tokens[$i]);
@@ -167,7 +156,31 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
         }
 
         if ($typehint = trim($typehint)) {
+
             $class = $this->namespaceResolver->resolve($this->currentClass);
+
+            if (\strpos($typehint, '|') !== false) {
+                $this->typeHintIndex->addInvalid(
+                    $class,
+                    trim($this->currentFunction),
+                    $token[1],
+                    new DisallowedUnionTypehintException("Union type $typehint cannot be used to create a double")
+                );
+
+                return;
+            }
+
+            if (\strpos($typehint, '&') !== false) {
+                $this->typeHintIndex->addInvalid(
+                    $class,
+                    trim($this->currentFunction),
+                    $token[1],
+                    new DisallowedUnionTypehintException("Intersection type $typehint cannot be used to create a double")
+                );
+
+                return;
+            }
+
             try {
                 $typehintFcqn = $this->namespaceResolver->resolve($typehint);
                 $this->typeHintIndex->add(
@@ -176,7 +189,7 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
                     $token[1],
                     $typehintFcqn
                 );
-            } catch (DisallowedScalarTypehintException $e) {
+            } catch (DisallowedNonObjectTypehintException $e) {
                 $this->typeHintIndex->addInvalid(
                     $class,
                     trim($this->currentFunction),
@@ -187,35 +200,35 @@ final class TokenizedTypeHintRewriter implements TypeHintRewriter
         }
     }
 
-    /**
-     * @param array|string $token
-     * @param string $type
-     *
-     * @return bool
-     */
-    private function tokenHasType($token, $type)
+    private function haveNotReachedEndOfTypeHint($token) : bool
     {
-        return is_array($token) && $type == $token[0];
+        // PHP 8.1 returns the intersection token `&` as an array,
+        // while previous versions return it as a string.
+        if ($token == '|' || $token == '&' || (is_array($token) && $token[1] == '&')) {
+            return false;
+        }
+
+        return !\in_array($token[0], $this->typehintTokens);
     }
 
     /**
-     * @param string $className
-     *
-     * @return bool
+     * @param array|string $token
      */
-    private function shouldExtractTokensOfClass($className)
+    private function tokenHasType($token, int $type): bool
+    {
+        return \is_array($token) && $type == $token[0];
+    }
+
+    private function shouldExtractTokensOfClass(string $className): bool
     {
         return substr($className, -4) == 'Spec';
     }
 
     /**
      * @param array|string $token
-     * @param string $string
-     *
-     * @return bool
      */
-    private function isToken($token, $string)
+    private function isToken($token, string $string): bool
     {
-        return $token == $string || (is_array($token) && $token[1] == $string);
+        return $token == $string || (\is_array($token) && $token[1] == $string);
     }
 }

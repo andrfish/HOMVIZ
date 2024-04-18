@@ -17,82 +17,44 @@ use Symfony\Component\Finder\Finder;
 
 class Filesystem
 {
-    /**
-     * @param string $path
-     *
-     * @return bool
-     */
-    public function pathExists($path)
+    
+    public function pathExists(string $path): bool
     {
         return file_exists($path);
     }
 
-    /**
-     * @param string $path
-     *
-     * @return string
-     */
-    public function getFileContents($path)
+    
+    public function getFileContents(string $path): string
     {
         return file_get_contents($path);
     }
 
-    /**
-     * @param string $path
-     * @param string $content
-     */
-    public function putFileContents($path, $content)
+    
+    public function putFileContents(string $path, string $content)
     {
         file_put_contents($path, $content);
     }
 
-    /**
-     * @param string $path
-     *
-     * @return bool
-     */
-    public function isDirectory($path)
+    
+    public function isDirectory(string $path): bool
     {
         return is_dir($path);
     }
 
-    /**
-     * @param string $path
-     */
-    public function makeDirectory($path)
+    
+    public function makeDirectory(string $path): void
     {
         mkdir($path, 0777, true);
     }
 
     /**
-     * @param string $path
-     *
      * @return \SplFileInfo[]
      */
-    public function findSpecFilesIn($path)
+    public function findSpecFilesIn(string $path): array
     {
         $finder = Finder::create()
             ->files()
             ->name('*Spec.php')
-            ->followLinks()
-            ->sortByName()
-            ->in($path)
-        ;
-
-        return iterator_to_array($finder);
-    }
-
-    /**
-     * @param $path
-     *
-     * @deprecated deprecated since 2.1
-     * @return array
-     */
-    public function findPhpFilesIn($path)
-    {
-        $finder = Finder::create()
-            ->files()
-            ->name('*.php')
             ->followLinks()
             ->sortByName()
             ->in($path)

@@ -15,7 +15,7 @@ namespace PhpSpec\Formatter\Presenter\Differ;
 
 use SebastianBergmann\Exporter\Exporter;
 
-class ObjectEngine implements EngineInterface
+final class ObjectEngine implements DifferEngine
 {
     /**
      * @var Exporter
@@ -26,34 +26,24 @@ class ObjectEngine implements EngineInterface
      */
     private $stringDiffer;
 
-    /**
-     * @param Exporter     $exporter
-     * @param StringEngine $stringDiffer
-     */
+    
     public function __construct(Exporter $exporter, StringEngine $stringDiffer)
     {
         $this->exporter = $exporter;
         $this->stringDiffer = $stringDiffer;
     }
 
-    /**
-     * @param mixed $expected
-     * @param mixed $actual
-     *
-     * @return bool
-     */
-    public function supports($expected, $actual)
+    
+    public function supports($expected, $actual): bool
     {
-        return is_object($expected) && is_object($actual);
+        return \is_object($expected) && \is_object($actual);
     }
 
     /**
      * @param object $expected
      * @param object $actual
-     *
-     * @return string
      */
-    public function compare($expected, $actual)
+    public function compare($expected, $actual): string
     {
         return $this->stringDiffer->compare(
             $this->exporter->export($expected),

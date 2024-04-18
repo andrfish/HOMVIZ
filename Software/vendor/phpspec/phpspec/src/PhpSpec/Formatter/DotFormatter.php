@@ -16,24 +16,20 @@ namespace PhpSpec\Formatter;
 use PhpSpec\Event\SuiteEvent;
 use PhpSpec\Event\ExampleEvent;
 
-class DotFormatter extends ConsoleFormatter
+final class DotFormatter extends ConsoleFormatter
 {
     /**
      * @var int
      */
     private $examplesCount = 0;
 
-    /**
-     * @param SuiteEvent $event
-     */
+    
     public function beforeSuite(SuiteEvent $event)
     {
-        $this->examplesCount = count($event->getSuite());
+        $this->examplesCount = \count($event->getSuite());
     }
 
-    /**
-     * @param ExampleEvent $event
-     */
+    
     public function afterExample(ExampleEvent $event)
     {
         $io = $this->getIO();
@@ -70,7 +66,7 @@ class DotFormatter extends ConsoleFormatter
         }
 
         if ($lastRow || $endOfRow) {
-            $length = strlen((string) $this->examplesCount);
+            $length = \strlen((string) $this->examplesCount);
             $format = sprintf(' %%%dd / %%%dd', $length, $length);
 
             $io->write(sprintf($format, $eventsCount, $this->examplesCount));
@@ -81,9 +77,7 @@ class DotFormatter extends ConsoleFormatter
         }
     }
 
-    /**
-     * @param SuiteEvent $event
-     */
+    
     public function afterSuite(SuiteEvent $event)
     {
         $this->getIO()->writeln("\n");
@@ -92,7 +86,7 @@ class DotFormatter extends ConsoleFormatter
         $this->outputSuiteSummary($event);
     }
 
-    private function outputExceptions()
+    private function outputExceptions(): void
     {
         $stats = $this->getStatisticsCollector();
         $notPassed = array_filter(array(
@@ -105,9 +99,13 @@ class DotFormatter extends ConsoleFormatter
         foreach ($notPassed as $events) {
             array_map(array($this, 'printException'), $events);
         }
+
+        foreach ($stats->getIgnoredResourceEvents() as $event) {
+            $this->printIgnoredResource($event);
+        }
     }
 
-    private function outputSuiteSummary(SuiteEvent $event)
+    private function outputSuiteSummary(SuiteEvent $event): void
     {
         $this->outputTotalSpecCount();
         $this->outputTotalExamplesCount();
@@ -118,22 +116,28 @@ class DotFormatter extends ConsoleFormatter
 
     private function plural($count)
     {
-        return $count !== 1 ? 's' : '';
+        return $count > 1 ? 's' : '';
     }
 
-    private function outputTotalSpecCount()
+    private function outputTotalSpecCount(): void
     {
-        $count = $this->getStatisticsCollector()->getTotalSpecs();
-        $this->getIO()->writeln(sprintf("%d spec%s", $count, $this->plural($count)));
+        $stats = $this->getStatisticsCollector();
+        $count = $stats->getTotalSpecs();
+        $line = sprintf("%d spec%s", $count, $this->plural($count));
+
+        if (($ignoredCount = count($stats->getIgnoredResourceEvents())) > 0) {
+            $line .= sprintf(' (%d ignored)', $ignoredCount);
+        }
+        $this->getIO()->writeln($line);
     }
 
-    private function outputTotalExamplesCount()
+    private function outputTotalExamplesCount(): void
     {
         $count = $this->getStatisticsCollector()->getEventsCount();
         $this->getIO()->write(sprintf("%d example%s ", $count, $this->plural($count)));
     }
 
-    private function outputSpecificExamplesCount()
+    private function outputSpecificExamplesCount(): void
     {
         $typesWithEvents = array_filter($this->getStatisticsCollector()->getCountsHash());
 
@@ -142,7 +146,7 @@ class DotFormatter extends ConsoleFormatter
             $counts[] = sprintf('<%s>%d %s</%s>', $type, $count, $type, $type);
         }
 
-        if (count($counts)) {
+        if (\count($counts)) {
             $this->getIO()->write(sprintf("(%s)", implode(', ', $counts)));
         }
     }

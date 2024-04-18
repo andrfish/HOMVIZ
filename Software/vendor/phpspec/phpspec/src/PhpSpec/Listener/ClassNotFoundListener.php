@@ -14,37 +14,31 @@
 namespace PhpSpec\Listener;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use PhpSpec\Console\IO;
-use PhpSpec\Locator\ResourceManagerInterface;
+use PhpSpec\Console\ConsoleIO;
+use PhpSpec\Locator\ResourceManager;
 use PhpSpec\CodeGenerator\GeneratorManager;
 use PhpSpec\Event\ExampleEvent;
 use PhpSpec\Event\SuiteEvent;
 use PhpSpec\Exception\Fracture\ClassNotFoundException as PhpSpecClassException;
 use Prophecy\Exception\Doubler\ClassNotFoundException as ProphecyClassException;
 
-class ClassNotFoundListener implements EventSubscriberInterface
+final class ClassNotFoundListener implements EventSubscriberInterface
 {
     private $io;
     private $resources;
     private $generator;
     private $classes = array();
 
-    /**
-     * @param IO $io
-     * @param ResourceManagerInterface $resources
-     * @param GeneratorManager $generator
-     */
-    public function __construct(IO $io, ResourceManagerInterface $resources, GeneratorManager $generator)
+    
+    public function __construct(ConsoleIO $io, ResourceManager $resources, GeneratorManager $generator)
     {
         $this->io        = $io;
         $this->resources = $resources;
         $this->generator = $generator;
     }
 
-    /**
-     * @return array
-     */
-    public static function getSubscribedEvents()
+    
+    public static function getSubscribedEvents(): array
     {
         return array(
             'afterExample' => array('afterExample', 10),
@@ -52,9 +46,7 @@ class ClassNotFoundListener implements EventSubscriberInterface
         );
     }
 
-    /**
-     * @param ExampleEvent $event
-     */
+    
     public function afterExample(ExampleEvent $event)
     {
         if (null === $exception = $event->getException()) {
@@ -69,9 +61,7 @@ class ClassNotFoundListener implements EventSubscriberInterface
         $this->classes[$exception->getClassname()] = true;
     }
 
-    /**
-     * @param SuiteEvent $event
-     */
+    
     public function afterSuite(SuiteEvent $event)
     {
         if (!$this->io->isCodeGenerationEnabled()) {

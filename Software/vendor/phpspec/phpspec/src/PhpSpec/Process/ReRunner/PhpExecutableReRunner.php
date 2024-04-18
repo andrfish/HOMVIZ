@@ -27,9 +27,7 @@ abstract class PhpExecutableReRunner implements PlatformSpecificReRunner
      */
     private $executablePath;
 
-    /**
-     * @param PhpExecutableFinder $executableFinder
-     */
+
     public function __construct(PhpExecutableFinder $executableFinder)
     {
         $this->executableFinder = $executableFinder;
@@ -37,6 +35,7 @@ abstract class PhpExecutableReRunner implements PlatformSpecificReRunner
 
     /**
      * @return false|string
+     * @psalm-suppress ReservedWord
      */
     protected function getExecutablePath()
     {
@@ -44,6 +43,7 @@ abstract class PhpExecutableReRunner implements PlatformSpecificReRunner
             $this->executablePath = $this->executableFinder->find();
         }
 
+        /** @var false|string */
         return $this->executablePath;
     }
 }

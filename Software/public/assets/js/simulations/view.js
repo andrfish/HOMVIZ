@@ -208,8 +208,8 @@ $(document).ready(function(){
         var newLabelArray = []
         
         $.each( resourceLabel, function( key2, value2 ) {
-
-
+	if (PopulationNameToIds(popoluation2) in dataSeriesLabelPie['simulation_'+scenario_ids[i2] ][value2])
+	{
           if (z==0) {
             config.options.title.text = 'Initial '+popoluation2+' Population'
             config.data.datasets[0].data.push(dataSeriesLabelPie['simulation_'+scenario_ids[i2] ][value2][PopulationNameToIds(popoluation2)]['init'])
@@ -226,9 +226,8 @@ $(document).ready(function(){
           }
 
           newLabelArray.push(newVal);
-
+	}
         });
-
         config.data.labels = newLabelArray;
 
         var ctx = document.getElementById('chart-area-'+z+'-'+scenario_ids[i2]+'-'+index2);
@@ -257,7 +256,8 @@ $(document).ready(function(){
       };
 
       $.each( resourceLabel, function( key2, value2 ) {
-
+	if (PopulationNameToIds(popoluation2) in dataSeriesLabelPie['simulation_'+scenario_ids[i3]][value2])
+	{
           let newVal = ''
           if (value2 === 'Rehabilitation') {
             newVal = 'Addiction / Rehabilitation Center'
@@ -271,7 +271,7 @@ $(document).ready(function(){
                                         ],
                                   maxBarThickness:50,
                                   label: [newVal]})
-
+	}
       });
 
       var ctx = document.getElementById('chart-bar-'+scenario_ids[i3]+'-'+index2);

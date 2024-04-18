@@ -14,24 +14,10 @@ class UsersTableSeeder extends Seeder
     {
         DB::table('users')->insert([
             'id' => '1',
-            'username' => 'pedram',
-            'email' => 'pedramkhoshnevis@gmail.com',
+            'username' => 'andrew',
+            'email' => 'andrew.fisher@ieee.org',
             'roles' => '1',
-            'password' => bcrypt('110110')
-        ]);
-        DB::table('users')->insert([
-            'id' => '2',
-            'username' => 'aidigitalsuite@gmail.com',
-            'email' => 'aidigitalsuite@gmail.com',
-            'roles' => '1',
-            'password' => bcrypt('110110')
-        ]);
-        DB::table('users')->insert([
-            'id' => '3',
-            'username' => 'admin',
-            'email' => 'example@example.com',
-            'roles' => '1',
-            'password' => bcrypt('110110')
+            'password' => bcrypt('L@kehead1009')
         ]);
     }
 }

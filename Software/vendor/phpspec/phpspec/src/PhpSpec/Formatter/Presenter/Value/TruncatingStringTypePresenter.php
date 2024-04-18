@@ -25,22 +25,16 @@ final class TruncatingStringTypePresenter implements StringTypePresenter
         $this->stringTypePresenter = $stringTypePresenter;
     }
 
-    /**
-     * @param mixed $value
-     * @return bool
-     */
-    public function supports($value)
+    
+    public function supports($value): bool
     {
         return $this->stringTypePresenter->supports($value);
     }
 
-    /**
-     * @param mixed $value
-     * @return string
-     */
-    public function present($value)
+    
+    public function present($value): string
     {
-        if (25 > strlen($value) && false === strpos($value, "\n")) {
+        if (25 > \strlen($value) && false === strpos($value, "\n")) {
             return $this->stringTypePresenter->present($value);
         }
 
@@ -48,10 +42,8 @@ final class TruncatingStringTypePresenter implements StringTypePresenter
         return $this->stringTypePresenter->present(sprintf('%s...', substr($lines[0], 0, 25)));
     }
 
-    /**
-     * @return int
-     */
-    public function getPriority()
+    
+    public function getPriority(): int
     {
         return $this->stringTypePresenter->getPriority();
     }

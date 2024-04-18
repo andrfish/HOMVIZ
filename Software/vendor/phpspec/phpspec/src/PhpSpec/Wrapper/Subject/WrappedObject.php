@@ -13,8 +13,8 @@
 
 namespace PhpSpec\Wrapper\Subject;
 
-use PhpSpec\Exception\Fracture\FactoryDoesNotReturnObjectException;
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Factory\ObjectFactory;
+use PhpSpec\Formatter\Presenter\Presenter;
 use PhpSpec\Wrapper\Unwrapper;
 use PhpSpec\Exception\Wrapper\SubjectException;
 
@@ -25,7 +25,7 @@ class WrappedObject
      */
     private $instance;
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
     /**
@@ -33,7 +33,7 @@ class WrappedObject
      */
     private $classname;
     /**
-     * @var callable|null
+     * @var null|callable
      */
     private $factoryMethod;
     /**
@@ -46,34 +46,23 @@ class WrappedObject
     private $isInstantiated = false;
 
     /**
-     * @param object|null        $instance
-     * @param PresenterInterface $presenter
+     * @param null|object        $instance
      */
-    public function __construct($instance, PresenterInterface $presenter)
+    public function __construct($instance, Presenter $presenter)
     {
         $this->instance = $instance;
         $this->presenter = $presenter;
-        if (is_object($this->instance)) {
-            $this->classname = get_class($this->instance);
+        if (\is_object($this->instance)) {
+            $this->classname = \get_class($this->instance);
             $this->isInstantiated = true;
         }
     }
 
     /**
-     * @param string $classname
-     * @param array  $arguments
-     *
      * @throws \PhpSpec\Exception\Wrapper\SubjectException
      */
-    public function beAnInstanceOf($classname, array $arguments = array())
+    public function beAnInstanceOf(string $classname, array $arguments = array()): void
     {
-        if (!is_string($classname)) {
-            throw new SubjectException(sprintf(
-                'Behavior subject classname should be a string, %s given.',
-                $this->presenter->presentValue($classname)
-            ));
-        }
-
         $this->classname      = $classname;
         $unwrapper            = new Unwrapper();
         $this->arguments      = $unwrapper->unwrapAll($arguments);
@@ -82,11 +71,9 @@ class WrappedObject
     }
 
     /**
-     * @param array $args
-     *
      * @throws \PhpSpec\Exception\Wrapper\SubjectException
      */
-    public function beConstructedWith($args)
+    public function beConstructedWith(array $args): void
     {
         if (null === $this->classname) {
             throw new SubjectException(sprintf(
@@ -103,12 +90,11 @@ class WrappedObject
     }
 
     /**
-     * @param callable|string|null $factoryMethod
-     * @param array                $arguments
+     * @param null|callable|string $factoryMethod
      */
-    public function beConstructedThrough($factoryMethod, array $arguments = array())
+    public function beConstructedThrough($factoryMethod, array $arguments = array()): void
     {
-        if (is_string($factoryMethod) &&
+        if (\is_string($factoryMethod) &&
             false === strpos($factoryMethod, '::') &&
             method_exists($this->classname, $factoryMethod)
         ) {
@@ -125,55 +111,47 @@ class WrappedObject
     }
 
     /**
-     * @return callable|null
+     * @return null|callable
      */
     public function getFactoryMethod()
     {
         return $this->factoryMethod;
     }
 
-    /**
-     * @return bool
-     */
-    public function isInstantiated()
+    
+    public function isInstantiated(): bool
     {
         return $this->isInstantiated;
     }
 
-    /**
-     * @param boolean $instantiated
-     */
-    public function setInstantiated($instantiated)
+    
+    public function setInstantiated(bool $instantiated): void
     {
         $this->isInstantiated = $instantiated;
     }
 
     /**
-     * @return string
+     * @return null|string
      */
     public function getClassName()
     {
         return $this->classname;
     }
 
-    /**
-     * @param string $classname
-     */
-    public function setClassName($classname)
+    
+    public function setClassName(string $classname): void
     {
         $this->classname = $classname;
     }
 
-    /**
-     * @return array
-     */
-    public function getArguments()
+    
+    public function getArguments(): array
     {
         return $this->arguments;
     }
 
     /**
-     * @return object|null
+     * @return null|object
      */
     public function getInstance()
     {
@@ -183,7 +161,7 @@ class WrappedObject
     /**
      * @param object $instance
      */
-    public function setInstance($instance)
+    public function setInstance($instance): void
     {
         $this->instance = $instance;
     }
@@ -198,7 +176,10 @@ class WrappedObject
         }
 
         if ($this->factoryMethod) {
-            $this->instance = $this->instantiateFromCallback($this->factoryMethod);
+            $this->instance = (new ObjectFactory())->instantiateFromCallable(
+                $this->factoryMethod,
+                $this->arguments
+            );
         } else {
             $reflection = new \ReflectionClass($this->classname);
 
@@ -210,26 +191,5 @@ class WrappedObject
         $this->isInstantiated = true;
 
         return $this->instance;
-    }
-
-    /**
-     * @param callable $factoryCallable
-     *
-     * @return object
-     */
-    private function instantiateFromCallback($factoryCallable)
-    {
-        $instance = call_user_func_array($factoryCallable, $this->arguments);
-
-        if (!is_object($instance)) {
-            throw new FactoryDoesNotReturnObjectException(sprintf(
-                'The method %s::%s did not return an object, returned %s instead',
-                $this->factoryMethod[0],
-                $this->factoryMethod[1],
-                gettype($instance)
-            ));
-        }
-
-        return $instance;
     }
 }

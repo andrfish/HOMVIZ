@@ -20,10 +20,8 @@ class Suite implements \Countable
      */
     private $specs = array();
 
-    /**
-     * @param Node\SpecificationNode $spec
-     */
-    public function addSpecification(Node\SpecificationNode $spec)
+    
+    public function addSpecification(Node\SpecificationNode $spec): void
     {
         $this->specs[] = $spec;
         $spec->setSuite($this);
@@ -32,15 +30,13 @@ class Suite implements \Countable
     /**
      * @return Node\SpecificationNode[]
      */
-    public function getSpecifications()
+    public function getSpecifications(): array
     {
         return $this->specs;
     }
 
-    /**
-     * @return number
-     */
-    public function count()
+    
+    public function count(): int
     {
         return array_sum(array_map('count', $this->specs));
     }

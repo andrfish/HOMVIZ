@@ -15,46 +15,35 @@ namespace PhpSpec\Matcher;
 
 use ArrayAccess;
 use PhpSpec\Exception\Example\FailureException;
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
 
-class ArrayKeyValueMatcher extends BasicMatcher
+final class ArrayKeyValueMatcher extends BasicMatcher
 {
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
 
-    /**
-     * @param PresenterInterface $presenter
-     */
-    public function __construct(PresenterInterface $presenter)
+    
+    public function __construct(Presenter $presenter)
     {
         $this->presenter = $presenter;
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return bool
-     */
-    public function supports($name, $subject, array $arguments)
+    
+    public function supports(string $name, $subject, array $arguments): bool
     {
         return
-            (is_array($subject) || $subject instanceof \ArrayAccess) &&
+            (\is_array($subject) || $subject instanceof \ArrayAccess) &&
             'haveKeyWithValue' === $name &&
-            2 == count($arguments)
+            2 == \count($arguments)
         ;
     }
 
     /**
-     * @param ArrayAccess|array $subject
-     * @param array $arguments
-     *
-     * @return bool
+     * @param array|ArrayAccess $subject
      */
-    protected function matches($subject, array $arguments)
+    protected function matches($subject, array $arguments): bool
     {
         $key = $arguments[0];
         $value  = $arguments[1];
@@ -66,14 +55,8 @@ class ArrayKeyValueMatcher extends BasicMatcher
         return (isset($subject[$key]) || array_key_exists($arguments[0], $subject)) && $subject[$key] === $value;
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return FailureException
-     */
-    protected function getFailureException($name, $subject, array $arguments)
+    
+    protected function getFailureException(string $name, $subject, array $arguments): FailureException
     {
         $key = $arguments[0];
 
@@ -93,14 +76,8 @@ class ArrayKeyValueMatcher extends BasicMatcher
         ));
     }
 
-    /**
-     * @param string $name
-     * @param mixed  $subject
-     * @param array  $arguments
-     *
-     * @return FailureException
-     */
-    protected function getNegativeFailureException($name, $subject, array $arguments)
+    
+    protected function getNegativeFailureException(string $name, $subject, array $arguments): FailureException
     {
         return new FailureException(sprintf(
             'Expected %s not to have %s key, but it does.',
@@ -109,8 +86,14 @@ class ArrayKeyValueMatcher extends BasicMatcher
         ));
     }
 
-    private function offsetExists($key, $subject)
+    private function offsetExists($key, $subject): bool
     {
-        return ($subject instanceof ArrayAccess && $subject->offsetExists($key)) || array_key_exists($key, $subject);
+        if ($subject instanceof ArrayAccess && $subject->offsetExists($key)) {
+            return true;
+        }
+        if (is_array($subject) && array_key_exists($key, $subject)) {
+            return true;
+        }
+        return false;
     }
 }

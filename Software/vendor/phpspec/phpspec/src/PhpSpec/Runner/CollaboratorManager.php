@@ -14,14 +14,14 @@
 namespace PhpSpec\Runner;
 
 use PhpSpec\Exception\Wrapper\CollaboratorException;
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
 use PhpSpec\Wrapper\Collaborator;
 use ReflectionFunctionAbstract;
 
 class CollaboratorManager
 {
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
     /**
@@ -29,41 +29,32 @@ class CollaboratorManager
      */
     private $collaborators = array();
 
-    /**
-     * @param PresenterInterface $presenter
-     */
-    public function __construct(PresenterInterface $presenter)
+    
+    public function __construct(Presenter $presenter)
     {
         $this->presenter = $presenter;
     }
 
     /**
-     * @param string       $name
-     * @param Collaborator $collaborator
+     * @param object $collaborator
      */
-    public function set($name, $collaborator)
+    public function set(string $name, $collaborator): void
     {
         $this->collaborators[$name] = $collaborator;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
-    public function has($name)
+    
+    public function has(string $name): bool
     {
         return isset($this->collaborators[$name]);
     }
 
     /**
-     * @param string $name
-     *
-     * @return Collaborator
+     * @return object
      *
      * @throws \PhpSpec\Exception\Wrapper\CollaboratorException
      */
-    public function get($name)
+    public function get(string $name)
     {
         if (!$this->has($name)) {
             throw new CollaboratorException(
@@ -74,12 +65,8 @@ class CollaboratorManager
         return $this->collaborators[$name];
     }
 
-    /**
-     * @param ReflectionFunctionAbstract $function
-     *
-     * @return array
-     */
-    public function getArgumentsFor(ReflectionFunctionAbstract $function)
+    
+    public function getArgumentsFor(ReflectionFunctionAbstract $function): array
     {
         $parameters = array();
         foreach ($function->getParameters() as $parameter) {

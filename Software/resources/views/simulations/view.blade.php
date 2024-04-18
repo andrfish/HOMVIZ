@@ -130,7 +130,9 @@
 
 
         <div class="card-body">
-
+	@php
+    	$active = '';
+	@endphp
          @foreach($scenario_info as $s2_key => $s2_val)
 
             {{--*/ $active = '' /*--}}

@@ -14,7 +14,7 @@
 namespace PhpSpec\Wrapper\Subject;
 
 use PhpSpec\Wrapper\Unwrapper;
-use PhpSpec\Formatter\Presenter\PresenterInterface;
+use PhpSpec\Formatter\Presenter\Presenter;
 use PhpSpec\Exception\Wrapper\SubjectException;
 use PhpSpec\Exception\Fracture\InterfaceNotImplementedException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -26,7 +26,7 @@ class SubjectWithArrayAccess
      */
     private $caller;
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     private $presenter;
     /**
@@ -34,14 +34,10 @@ class SubjectWithArrayAccess
      */
     private $dispatcher;
 
-    /**
-     * @param Caller                   $caller
-     * @param PresenterInterface       $presenter
-     * @param EventDispatcherInterface $dispatcher
-     */
+    
     public function __construct(
         Caller $caller,
-        PresenterInterface $presenter,
+        Presenter $presenter,
         EventDispatcherInterface $dispatcher
     ) {
         $this->caller     = $caller;
@@ -50,11 +46,9 @@ class SubjectWithArrayAccess
     }
 
     /**
-     * @param string|integer $key
-     *
-     * @return bool
+     * @param int|string $key
      */
-    public function offsetExists($key)
+    public function offsetExists($key): bool
     {
         $unwrapper = new Unwrapper();
         $subject = $this->caller->getWrappedObject();
@@ -62,13 +56,12 @@ class SubjectWithArrayAccess
 
         $this->checkIfSubjectImplementsArrayAccess($subject);
 
+        /** @var \ArrayAccess|array $subject */
         return isset($subject[$key]);
     }
 
     /**
-     * @param string|integer $key
-     *
-     * @return mixed
+     * @param int|string $key
      */
     public function offsetGet($key)
     {
@@ -78,14 +71,14 @@ class SubjectWithArrayAccess
 
         $this->checkIfSubjectImplementsArrayAccess($subject);
 
+        /** @var \ArrayAccess|array $subject */
         return $subject[$key];
     }
 
     /**
-     * @param string|integer $key
-     * @param mixed          $value
+     * @param int|string $key
      */
-    public function offsetSet($key, $value)
+    public function offsetSet($key, $value): void
     {
         $unwrapper = new Unwrapper();
         $subject = $this->caller->getWrappedObject();
@@ -94,13 +87,14 @@ class SubjectWithArrayAccess
 
         $this->checkIfSubjectImplementsArrayAccess($subject);
 
+        /** @var \ArrayAccess|array $subject */
         $subject[$key] = $value;
     }
 
     /**
-     * @param string|integer $key
+     * @param int|string $key
      */
-    public function offsetUnset($key)
+    public function offsetUnset($key): void
     {
         $unwrapper = new Unwrapper();
         $subject = $this->caller->getWrappedObject();
@@ -108,28 +102,25 @@ class SubjectWithArrayAccess
 
         $this->checkIfSubjectImplementsArrayAccess($subject);
 
+        /** @var \ArrayAccess|array $subject */
         unset($subject[$key]);
     }
 
     /**
-     * @param mixed $subject
-     *
      * @throws \PhpSpec\Exception\Wrapper\SubjectException
      * @throws \PhpSpec\Exception\Fracture\InterfaceNotImplementedException
      */
-    private function checkIfSubjectImplementsArrayAccess($subject)
+    private function checkIfSubjectImplementsArrayAccess($subject): void
     {
-        if (is_object($subject) && !($subject instanceof \ArrayAccess)) {
+        if (\is_object($subject) && !($subject instanceof \ArrayAccess)) {
             throw $this->interfaceNotImplemented();
-        } elseif (!($subject instanceof \ArrayAccess) && !is_array($subject)) {
+        } elseif (!($subject instanceof \ArrayAccess) && !\is_array($subject)) {
             throw $this->cantUseAsArray($subject);
         }
     }
 
-    /**
-     * @return InterfaceNotImplementedException
-     */
-    private function interfaceNotImplemented()
+    
+    private function interfaceNotImplemented(): InterfaceNotImplementedException
     {
         return new InterfaceNotImplementedException(
             sprintf(
@@ -142,12 +133,8 @@ class SubjectWithArrayAccess
         );
     }
 
-    /**
-     * @param mixed $subject
-     *
-     * @return SubjectException
-     */
-    private function cantUseAsArray($subject)
+    
+    private function cantUseAsArray($subject): SubjectException
     {
         return new SubjectException(sprintf(
             'Can not use %s as array.',

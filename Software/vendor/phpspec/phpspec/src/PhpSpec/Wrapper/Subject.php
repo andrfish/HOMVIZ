@@ -20,7 +20,96 @@ use PhpSpec\Wrapper\Subject\ExpectationFactory;
 use PhpSpec\Util\Instantiator;
 use ArrayAccess;
 
-class Subject implements ArrayAccess, WrapperInterface
+/**
+ * @method void shouldHaveType($type)
+ * @method void shouldNotHaveType($type)
+ * @method void shouldReturnAnInstanceOf($type)
+ * @method void shouldNotReturnAnInstanceOf($type)
+ * @method void shouldBeAnInstanceOf($type)
+ * @method void shouldNotBeAnInstanceOf($type)
+ * @method void shouldImplement($interface)
+ * @method void shouldNotImplement($interface)
+ * @method void shouldBe($value)
+ * @method void shouldNotBe($value)
+ * @method void shouldBeEqualTo($value)
+ * @method void shouldNotBeEqualTo($value)
+ * @method void shouldReturn($value)
+ * @method void shouldNotReturn($value)
+ * @method void shouldEqual($value)
+ * @method void shouldNotEqual($value)
+ * @method void shouldBeLike($value)
+ * @method void shouldNotBeLike($value)
+ * @method void shouldHaveCount($count)
+ * @method void shouldNotHaveCount($count)
+ * @method void shouldBeArray()
+ * @method void shouldNotBeArray()
+ * @method void shouldBeBool()
+ * @method void shouldNotBeBool()
+ * @method void shouldBeBoolean()
+ * @method void shouldNotBeBoolean()
+ * @method void shouldBeCallable()
+ * @method void shouldNotBeCallable()
+ * @method void shouldBeDouble()
+ * @method void shouldNotBeDouble()
+ * @method void shouldBeFloat()
+ * @method void shouldNotBeFloat()
+ * @method void shouldBeInt()
+ * @method void shouldNotBeInt()
+ * @method void shouldBeInteger()
+ * @method void shouldNotBeInteger()
+ * @method void shouldBeLong()
+ * @method void shouldNotBeLong()
+ * @method void shouldBeNull()
+ * @method void shouldNotBeNull()
+ * @method void shouldBeNumeric()
+ * @method void shouldNotBeNumeric()
+ * @method void shouldBeObject()
+ * @method void shouldNotBeObject()
+ * @method void shouldBeReal()
+ * @method void shouldNotBeReal()
+ * @method void shouldBeResource()
+ * @method void shouldNotBeResource()
+ * @method void shouldBeScalar()
+ * @method void shouldNotBeScalar()
+ * @method void shouldBeString()
+ * @method void shouldNotBeString()
+ * @method void shouldBeNan()
+ * @method void shouldNotBeNan()
+ * @method void shouldBeFinite()
+ * @method void shouldNotBeFinite()
+ * @method void shouldBeInfinite()
+ * @method void shouldNotBeInfinite()
+ * @method void shouldBeApproximately($value, $precision)
+ * @method void shouldContain($value)
+ * @method void shouldNotContain($value)
+ * @method void shouldHaveKeyWithValue($key, $value)
+ * @method void shouldNotHaveKeyWithValue($key, $value)
+ * @method void shouldHaveKey($key)
+ * @method void shouldNotHaveKey($key)
+ * @method void shouldStartWith($string)
+ * @method void shouldNotStartWith($string)
+ * @method void shouldEndWith($string)
+ * @method void shouldNotEndWith($string)
+ * @method void shouldMatch($regex)
+ * @method void shouldNotMatch($regex)
+ * @method void shouldIterateAs($iterable)
+ * @method void shouldYield($iterable)
+ * @method void shouldNotIterateAs($iterable)
+ * @method void shouldNotYield($iterable)
+ * @method void shouldIterateLike($iterable)
+ * @method void shouldYieldLike($iterable)
+ * @method void shouldNotIterateLike($iterable)
+ * @method void shouldNotYieldLike($iterable)
+ * @method void shouldStartIteratingAs($iterable)
+ * @method void shouldStartYielding($iterable)
+ * @method void shouldNotStartIteratingAs($iterable)
+ * @method void shouldNotStartYielding($iterable)
+ *
+ * @template TKey
+ * @template TValue
+ * @template-implements ArrayAccess<TKey,TValue>
+ */
+class Subject implements ArrayAccess, ObjectWrapper
 {
     /**
      * @var mixed
@@ -48,12 +137,7 @@ class Subject implements ArrayAccess, WrapperInterface
     private $expectationFactory;
 
     /**
-     * @param mixed                  $subject
-     * @param Wrapper                $wrapper
-     * @param WrappedObject          $wrappedObject
-     * @param Caller                 $caller
-     * @param SubjectWithArrayAccess $arrayAccess
-     * @param ExpectationFactory     $expectationFactory
+     * @param mixed $subject
      */
     public function __construct(
         $subject,
@@ -71,34 +155,30 @@ class Subject implements ArrayAccess, WrapperInterface
         $this->expectationFactory = $expectationFactory;
     }
 
-    /**
-     * @param string $className
-     * @param array  $arguments
-     */
-    public function beAnInstanceOf($className, array $arguments = array())
+
+    public function beAnInstanceOf(string $className, array $arguments = array()): void
     {
         $this->wrappedObject->beAnInstanceOf($className, $arguments);
     }
 
     /**
-     * @param ...$arguments
+     * @param mixed ...$arguments
      */
-    public function beConstructedWith()
+    public function beConstructedWith(): void
     {
-        $this->wrappedObject->beConstructedWith(func_get_args());
+        $this->wrappedObject->beConstructedWith(\func_get_args());
     }
 
     /**
      * @param array|string $factoryMethod
-     * @param array        $arguments
      */
-    public function beConstructedThrough($factoryMethod, array $arguments = array())
+    public function beConstructedThrough($factoryMethod, array $arguments = array()): void
     {
         $this->wrappedObject->beConstructedThrough($factoryMethod, $arguments);
     }
 
     /**
-     * @return mixed
+     * @return ?object
      */
     public function getWrappedObject()
     {
@@ -109,82 +189,71 @@ class Subject implements ArrayAccess, WrapperInterface
         return $this->subject = $this->caller->getWrappedObject();
     }
 
-    /**
-     * @param string $method
-     * @param array  $arguments
-     *
-     * @return Subject
-     */
-    public function callOnWrappedObject($method, array $arguments = array())
+
+    public function callOnWrappedObject(string $method, array $arguments = array()): Subject
     {
         return $this->caller->call($method, $arguments);
     }
 
     /**
-     * @param string $property
-     * @param mixed  $value
-     *
-     * @return mixed
+     * @param mixed $value
+     * @return void
      */
-    public function setToWrappedObject($property, $value = null)
+    public function setToWrappedObject(string $property, $value = null)
     {
-        return $this->caller->set($property, $value);
+        $this->caller->set($property, $value);
     }
 
     /**
-     * @param string $property
-     *
      * @return string|Subject
      */
-    public function getFromWrappedObject($property)
+    public function getFromWrappedObject(string $property)
     {
         return $this->caller->get($property);
     }
 
     /**
-     * @param string|integer $key
-     *
-     * @return Subject
+     * @psalm-param TKey $key
+     * @param int|string $key
      */
-    public function offsetExists($key)
+    public function offsetExists($key): bool
     {
-        return $this->wrap($this->arrayAccess->offSetExists($key));
+        return $this->arrayAccess->offsetExists($key);
     }
 
     /**
-     * @param string|integer $key
-     *
-     * @return Subject
+     * @param int|string $key
+     * @psalm-param TKey $key
+     * @psalm-suppress ImplementedReturnTypeMismatch
      */
-    public function offsetGet($key)
+    public function offsetGet($key): Subject
     {
         return $this->wrap($this->arrayAccess->offsetGet($key));
     }
 
     /**
-     * @param string|integer $key
-     * @param mixed          $value
+     * @param mixed $value
+     * @psalm-param TKey $offset
+     * @param int|string $offset
      */
-    public function offsetSet($key, $value)
+    public function offsetSet($offset, $value): void
     {
-        $this->arrayAccess->offsetSet($key, $value);
+        $this->arrayAccess->offsetSet($offset, $value);
     }
 
     /**
-     * @param string|integer $key
+     * @psalm-param TKey $key
+     * @param int|string $key
      */
-    public function offsetUnset($key)
+    public function offsetUnset($key): void
     {
         $this->arrayAccess->offsetUnset($key);
     }
 
     /**
-     * @param string $method
-     * @param array  $arguments
-     *
      * @return mixed|Subject
      */
-    public function __call($method, array $arguments = array())
+    public function __call(string $method, array $arguments = array())
     {
         if (0 === strpos($method, 'should')) {
             return $this->callExpectation($method, $arguments);
@@ -201,52 +270,41 @@ class Subject implements ArrayAccess, WrapperInterface
         return $this->caller->call($method, $arguments);
     }
 
-    /**
-     * @return Subject
-     */
-    public function __invoke()
+
+    public function __invoke(): Subject
     {
-        return $this->caller->call('__invoke', func_get_args());
+        return $this->caller->call('__invoke', \func_get_args());
     }
 
+
     /**
-     * @param string $property
-     * @param mixed  $value
-     *
-     * @return mixed
+     * @param mixed $value
      */
-    public function __set($property, $value = null)
+    public function __set(string $property, $value = null)
     {
         return $this->caller->set($property, $value);
     }
 
     /**
-     * @param string $property
-     *
      * @return string|Subject
      */
-    public function __get($property)
+    public function __get(string $property)
     {
         return $this->caller->get($property);
     }
 
     /**
-     * @param string $value
-     *
-     * @return Subject
+     * @param mixed $value
      */
-    private function wrap($value)
+    private function wrap($value): Subject
     {
         return $this->wrapper->wrap($value);
     }
 
     /**
-     * @param string $method
-     * @param array  $arguments
-     *
      * @return mixed
      */
-    private function callExpectation($method, array $arguments)
+    private function callExpectation(string $method, array $arguments)
     {
         $subject = $this->makeSureWeHaveASubject();
 
@@ -264,10 +322,11 @@ class Subject implements ArrayAccess, WrapperInterface
      */
     private function makeSureWeHaveASubject()
     {
-        if (null === $this->subject && $this->wrappedObject->getClassname()) {
+        if (null === $this->subject && $this->wrappedObject->getClassName()) {
             $instantiator = new Instantiator();
-
-            return $instantiator->instantiate($this->wrappedObject->getClassname());
+            $className = $this->wrappedObject->getClassName();
+            /** @var string $className */
+            return $instantiator->instantiate($className);
         }
 
         return $this->subject;

@@ -15,18 +15,12 @@ namespace PhpSpec\Formatter\Presenter\Exception;
 
 final class HtmlPhpSpecExceptionPresenter extends AbstractPhpSpecExceptionPresenter implements PhpSpecExceptionPresenter
 {
-    /**
-     * @param string  $file
-     * @param integer $lineno
-     * @param integer $context
-     *
-     * @return string
-     */
-    protected function presentFileCode($file, $lineno, $context = 6)
+    
+    protected function presentFileCode(string $file, int $lineno, int $context = 6): string
     {
         $lines  = explode(PHP_EOL, file_get_contents($file));
-        $offset = max(0, $lineno - ceil($context / 2));
-        $lines  = array_slice($lines, $offset, $context);
+        $offset = (int)max(0, $lineno - ceil($context / 2));
+        $lines  = \array_slice($lines, $offset, $context);
 
         $text = PHP_EOL;
 
